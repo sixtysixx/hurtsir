@@ -4,7 +4,7 @@
 
 * [**Download SyxSirHurtTroubleshooter.exe**](https://github.com/sixtysixx/hurtsir/raw/main/SyxSirHurtTroubleshooter.exe) (Automated Troubleshooting Tool)
 * [**View Raw main.py Source**](https://raw.githubusercontent.com/sixtysixx/hurtsir/main/main.py)
-* [**View SyxSirHurtTroubleshooter Project**](https://github.com/sixtysixx/hurtsir/)
+* [**View Github Repo**](https://github.com/sixtysixx/hurtsir/)
 
 ---
 
