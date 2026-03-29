@@ -1,4 +1,14 @@
-### SirHurt Troubleshooting Guide
+# SirHurt Troubleshooting Guide
+
+### 🛠️ Quick Links
+
+* [**Download SirHurtFix.exe**](https://github.com/sixtysixx/hurtsir/raw/main/SyxSirHurtTroubleshooter.exe) (Automated Troubleshooting Tool)
+* [**View Raw main.py Source**](https://raw.githubusercontent.com/sixtysixx/hurtsir/main/main.py)
+* [**View SyxSirHurtTroubleshooter Project**](https://github.com/sixtysixx/hurtsir/)
+
+---
+
+### SirShart (SirHurt) Troubleshooting Guide ong ong frfr
 
 * **Windows Version:** Ensure you are on **24H2** or above.
 * **Restart:** Have you tried restarting your PC?
@@ -12,12 +22,10 @@
 Install both x86 and x64 versions of the following:
 
 #### Visual C++ Redistributables
-
 * [vc_redist.x86.exe](https://aka.ms/vc14/vc_redist.x86.exe)
 * [vc_redist.x64.exe](https://aka.ms/vc14/vc_redist.x64.exe)
 
 #### .NET SDK (10.0.201)
-
 * [dotnet-sdk-win-x64.exe](https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.201/dotnet-sdk-10.0.201-win-x64.exe)
 * [dotnet-sdk-win-x86.exe](https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.201/dotnet-sdk-10.0.201-win-x86.exe)
 
@@ -27,10 +35,10 @@ Install both x86 and x64 versions of the following:
 
 1. **Antivirus:** Disable your AV. Create a dedicated folder and **exclude it** from scans.
 2. **Download Utilities:** Place these inside your excluded folder:
-    * [Sirhurt Cleaner](https://github.com/massimopaganigh/sirhurt.cleaner)
-    * [Sirstrap](https://github.com/massimopaganigh/Sirstrap) (UI or CLI works; CLI is recommended).
+   * [Sirhurt Cleaner](https://github.com/massimopaganigh/sirhurt.cleaner)
+   * [Sirstrap](https://github.com/massimopaganigh/Sirstrap) (UI or CLI works; CLI is recommended).
 3. **Sirhurt:** Download this directly from the official downloads page.
-    > **Note:** Use **7-Zip** or **WinRAR** for extraction. The default Windows extractor can cause issues.
+   > **Note:** Use **7-Zip** or **WinRAR** for extraction. The default Windows extractor can cause issues.
 
 ---
 
