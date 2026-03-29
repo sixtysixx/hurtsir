@@ -8,7 +8,7 @@
 
 ---
 
-### SirShart (SirHurt) Troubleshooting Guide ong ong frfr
+### Manual Troubleshooting Guid
 
 * **Windows Version:** Ensure you are on **24H2** or above.
 * **Restart:** Have you tried restarting your PC?
