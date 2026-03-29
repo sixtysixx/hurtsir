@@ -1,4 +1,4 @@
-### SirShart (SirHurt) Troubleshooting Guide ong ong frfr
+### SirHurt Troubleshooting Guide
 
 * **Windows Version:** Ensure you are on **24H2** or above.
 * **Restart:** Have you tried restarting your PC?
