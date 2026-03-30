@@ -12,6 +12,11 @@ import shutil
 import glob
 import json
 from datetime import datetime
+import urllib3
+
+# --- SSL Error Suppression ---
+# Essential for troubleshooters running on systems with broken root certificates
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- Optimized Imports for Nuitka ---
 try:
@@ -112,7 +117,20 @@ def check_runtime(registry_path):
 
 
 def download_file(url, dest, timeout=180):
-    r = requests.get(url, stream=True, allow_redirects=True, timeout=timeout, headers={"User-Agent": "Sentinel/1.0"})
+    """
+    Downloads a file with a robust fallback for SSL/Certificate bundle issues
+    common in compiled Python environments.
+    """
+    headers = {"User-Agent": "Sentinel/1.0"}
+    
+    try:
+        # Standard attempt
+        r = requests.get(url, stream=True, allow_redirects=True, timeout=timeout, headers=headers)
+    except (requests.exceptions.SSLError, OSError) as e:
+        # Fallback for "Could not find a suitable TLS CA certificate bundle"
+        log_event(f"SSL/Cert Error encountered: {e}. Retrying without verification...")
+        r = requests.get(url, stream=True, allow_redirects=True, timeout=timeout, headers=headers, verify=False)
+    
     r.raise_for_status()
     with open(dest, "wb") as f:
         for data in r.iter_content(chunk_size=8192):
