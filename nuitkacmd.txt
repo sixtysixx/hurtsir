@@ -1,1 +1,1 @@
-nuitka --onefile --standalone --windows-uac-admin --enable-plugin=tk-inter --include-package=questionary --include-package=rich --include-package=requests --jobs=12 --lto=no --output-filename=SyxSirHurtTroubleshooter.exe main.py
+nuitka --onefile --standalone --windows-uac-admin --include-package=questionary --include-package=rich --jobs=12 --lto=no --output-filename=SyxSirHurtTroubleshooter.exe main.py
