@@ -735,12 +735,14 @@ def show_post_restart_instructions():
             border_style="green",
         )
     )
-    
+
     # Prompting to open the browser automatically
-    if questionary.confirm("Would you like to open the SirHurt download page now?").ask():
+    if questionary.confirm(
+        "Would you like to open the SirHurt download page now?"
+    ).ask():
         log_event("User requested to open download link in browser.")
-        webbrowser.open(CONFIG['DOWNLOAD_URL'])
-    
+        webbrowser.open(CONFIG["DOWNLOAD_URL"])
+
     log_event("Post-restart instructions displayed.")
     input("\nPress Enter to finish and exit...")
 
