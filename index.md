@@ -15,7 +15,7 @@
 - Attempt to inject
 - Youll be prompted to login, so proceed with that
 - After login, do NOT press inject, it will automatically inject after
-- If that works, have fun with sirhurt fr, rerun bootstrapper as admin every time you want to open sirhurt.
+- If that works, have fun with sirhurt, rerun bootstrapper every time you want to open sirhurt.
 
 ---
 
@@ -36,15 +36,15 @@ Install both x86 and x64 versions of the following:
 - [Cx86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-10.0.5-windows-x86-installer)
 - [Dx64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.5-windows-x64-installer)
 - [Dx86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.5-windows-x86-installer)
-<br>
-RESTART PC
+
+MAKE SURE YOU RESTART YOUR PC
 ---
 
 ### Setup & Tools
 
 1. **Antivirus:** Disable your AV. Create a dedicated folder and **exclude it** from scans.
 2. **Download Utilities:** Place these inside your excluded folder:
-   - [Sirhurt Cleaner](https://github.com/massimopaganigh/sirhurt.cleaner)
+   - [Sirhurt Cleaner](https://github.com/massimopaganigh/Sirstrap)
    - [Sirstrap](https://github.com/massimopaganigh/Sirstrap) (CLI is recommended for easier config- Can use others (*whatever*strap) if they allow to manually set roblox build.).
 3. **Sirhurt:** Download sirhurt directly from the official downloads page. If using box link click top right on the starting page, otherwise it likely wont download.
    > **Note:** Use **7-Zip** or **WinRAR** for extraction. The default Windows extractor can cause issues.
