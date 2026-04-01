@@ -1,4 +1,7 @@
-# SirHurt Troubleshooting Guide
+# UNOFFICIAL SirHurt Troubleshooting Guide
+
+woah super swag notice: this isnt sirhurts official troubleshooting guide, nor automatic troubleshooter, this was made by [syx](https://discord.com/users/1045933816260350032) (im gonna regret putting my dsc here lol)
+disclaimer or something: im not responsable for any misuse, malfunction to ur device, or literally anything ig lol
 
 ## Quick Links
 
@@ -10,10 +13,12 @@
 
 ### Manual Troubleshooting Guid
 
-- **Windows Version:** Ensure you are on **24H2** or above.
-- **Restart:** Have you tried restarting your PC?
-- **Timing:** Wait 5-10 seconds before injecting, or toggle **Autoinject** on/off.
-- **Fresh Install:** Redownload the `.zip` from the Sirhurt website if the bootstrapper isn't working.
+- Ensure you are on Windows version **24H2** or above.
+- Have you tried restarting your PC?
+- Wait 5-10 seconds before injecting, or toggle **Autoinject** on/off.
+- Redownload the `.zip` from the Sirhurt website if the bootstrapper isn't working.
+- Temporarily disable voice chat functionality on your account.
+- Disable ROBLOX's `minimize to tray when closed` setting
 
 ---
 
@@ -21,7 +26,7 @@
 
 Install both x86 and x64 versions of the following:
 
-#### Visual C++ Redistributables
+#### Visual C++ (cpp) Redistributables
 
 - [vc_redist.x86.exe](https://aka.ms/vc14/vc_redist.x86.exe)
 - [vc_redist.x64.exe](https://aka.ms/vc14/vc_redist.x64.exe)
@@ -38,8 +43,8 @@ Install both x86 and x64 versions of the following:
 1. **Antivirus:** Disable your AV. Create a dedicated folder and **exclude it** from scans.
 2. **Download Utilities:** Place these inside your excluded folder:
    - [Sirhurt Cleaner](https://github.com/massimopaganigh/sirhurt.cleaner)
-   - [Sirstrap](https://github.com/massimopaganigh/Sirstrap) (CLI is recommended for easier config).
-3. **Sirhurt:** Download this directly from the official downloads page.
+   - [Sirstrap](https://github.com/massimopaganigh/Sirstrap) (CLI is recommended for easier config- Can use others (*whatever*strap) if they allow to manually set roblox build.).
+3. **Sirhurt:** Download sirhurt directly from the official downloads page. If using box link click top right on the starting page, otherwise it likely wont download.
    > **Note:** Use **7-Zip** or **WinRAR** for extraction. The default Windows extractor can cause issues.
 
 ---
