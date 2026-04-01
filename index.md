@@ -36,7 +36,6 @@ Install both x86 and x64 versions of the following:
 - [Cx86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-10.0.5-windows-x86-installer)
 - [Dx64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.5-windows-x64-installer)
 - [Dx86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.5-windows-x86-installer)
-- 
 Restart PC
 ---
 
