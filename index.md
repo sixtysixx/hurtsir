@@ -15,11 +15,19 @@ disclaimer or something: im not responsable for any misuse, malfunction to ur de
 ### Manual Troubleshooting Guid
 
 - Ensure you are on Windows version **24H2** or above.
-- Have you tried restarting your PC?
+- Restart PC and retry injection
 - Wait 5-10 seconds before injecting, or toggle **Autoinject** on/off.
-- Redownload the `.zip` from the Sirhurt website if the bootstrapper isn't working.
 - Temporarily disable voice chat functionality on your account.
 - Disable ROBLOX's `minimize to tray when closed` setting
+- Move sirhurt into a dedicated folder, and exclude that folder from your AV (antivirus)
+- Open roblox and join a simple game, such as a baseplate or default game
+- Run bootstrapper as admin, waiting for it to download everything (make sure sirhurt.dll exists, if not- rerun bootstrapper as admin)
+- Kill processes (bottom right button)
+- Open roblox again and join a game
+- Attempt to inject
+- Youll be prompted to login, so proceed with that
+- After login, do NOT press inject, it will automatically inject after
+- If that works, have fun with sirhurt fr, rerun bootstrapper as admin every time you want to open sirhurt.
 
 ---
 
@@ -50,7 +58,7 @@ Install both x86 and x64 versions of the following:
 
 ---
 
-### Execution Steps
+### Execution Steps for Beta Roblox Clients
 
 1. **Run Sirstrap:** Wait for Roblox to download and open, then close it.
 2. **Run Sirhurt Cleaner:** Press `Y` + `Enter` for all prompts (including auth data—you will need to log in again during injection).
