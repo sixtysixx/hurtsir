@@ -1,17 +1,5 @@
 # UNOFFICIAL SirHurt Troubleshooting Guide
 
-woah super swag notice: this isnt sirhurts official troubleshooting guide, nor automatic troubleshooter, this was made by [syx](https://discord.com/users/1045933816260350032)  <br>
-(im gonna regret putting my dsc here lol) <br>
-disclaimer or something: im not responsible for any misuse, malfunction to ur device, or literally anything ig lol
-
-## Quick Links
-
-- [**Download SyxSirHurtTroubleshooter.exe**](https://github.com/sixtysixx/hurtsir/raw/main/SyxSirHurtTroubleshooter.exe) (Automated Troubleshooting Tool)
-- [**View Raw main.py Source**](https://raw.githubusercontent.com/sixtysixx/hurtsir/main/main.py)
-- [**View Github Repo**](https://github.com/sixtysixx/hurtsir/)
-
----
-
 ### Manual Troubleshooting Guid
 
 - Ensure you are on Windows version **24H2** or above.
