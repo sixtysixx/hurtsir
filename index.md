@@ -1,6 +1,7 @@
 # UNOFFICIAL SirHurt Troubleshooting Guide
 
-woah super swag notice: this isnt sirhurts official troubleshooting guide, nor automatic troubleshooter, this was made by [syx](https://discord.com/users/1045933816260350032) (im gonna regret putting my dsc here lol)  <br>
+woah super swag notice: this isnt sirhurts official troubleshooting guide, nor automatic troubleshooter, this was made by [syx](https://discord.com/users/1045933816260350032)  <br>
+(im gonna regret putting my dsc here lol) <br>
 disclaimer or something: im not responsable for any misuse, malfunction to ur device, or literally anything ig lol
 
 ## Quick Links
