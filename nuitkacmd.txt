@@ -1,1 +1,0 @@
-nuitka --onefile --standalone --windows-uac-admin --include-package=questionary --include-package=rich --jobs=12 --lto=no --output-filename=SyxSirHurtTroubleshooter.exe main.py
