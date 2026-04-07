@@ -1,63 +1,109 @@
 # UNOFFICIAL SirHurt Troubleshooting Guide
 
-### Manual Troubleshooting Guid
-
-- Ensure you are on Windows version **24H2** or above.
-- Restart PC and retry injection
-- Wait 5-10 seconds before injecting, or toggle **Autoinject** on/off.
-- Temporarily disable voice chat functionality on your account.
-- Disable ROBLOX's `minimize to tray when closed` setting
-- Move sirhurt into a dedicated folder, and exclude that folder from your AV (antivirus)
-- Open roblox and join a simple game, such as a baseplate or default game
-- Run bootstrapper as admin, waiting for it to download everything (make sure sirhurt.dll exists, if not- rerun bootstrapper as admin)
-- Kill processes (bottom right button)
-- Open roblox again and join a game
-- Attempt to inject
-- Youll be prompted to login, so proceed with that
-- After login, do NOT press inject, it will automatically inject after
-- If that works, have fun with sirhurt, rerun bootstrapper every time you want to open sirhurt.
+This guide provides comprehensive steps to resolve common issues with SirHurt injection and execution. Please read the guide and follow step by step (dont just fucking skim through it)
 
 ---
 
-### Required Installations
+### 1. System Repairs (SFC & DISM)
 
-Install both x86 and x64 versions of the following:
+Run these commands in an **Administrator PowerShell** or **Command Prompt**:
 
-#### Visual C++ (cpp) Redistributables
+1. **SFC Scan:** Fixes corrupted system files.
 
-- [vc_redist.x86.exe](https://aka.ms/vc14/vc_redist.x86.exe)
-- [vc_redist.x64.exe](https://aka.ms/vc14/vc_redist.x64.exe)
+   ```cmd
+   sfc /scannow
+   ```
 
-#### .NET SDK (10.0.201)
+2. **DISM Health Check:** Checks for component store corruption.
 
-- [dotnet-sdk-win-x64.exe](https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.201/dotnet-sdk-10.0.201-win-x64.exe)
-- [dotnet-sdk-win-x86.exe](https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.201/dotnet-sdk-10.0.201-win-x86.exe)
-- [Cx64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-10.0.5-windows-x64-installer)
-- [Cx86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-10.0.5-windows-x86-installer)
-- [Dx64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.5-windows-x64-installer)
-- [Dx86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.5-windows-x86-installer)
+   ```cmd
+   DISM /Online /Cleanup-Image /CheckHealth
+   ```
 
-MAKE SURE YOU RESTART YOUR PC
+3. **DISM Scan Health:** Scans the Windows image for corruption.
+
+   ```cmd
+   DISM /Online /Cleanup-Image /ScanHealth
+   ```
+
+4. **DISM Restore Health:** Repairs the Windows image using Windows Update.
+
+   ```cmd
+   DISM /Online /Cleanup-Image /RestoreHealth
+   ```
+
+5. **Missing Drivers** Finds and installs any outdated or missing drivers
+
+   ```
+   https://sourceforge.net/projects/snappy-driver-installer-origin/
+   - Click `Download latest release`, extract and run the automatic batch script, Index 'This PC Only', Install any missing or outdated drivers. I would 100% recommend a recovery point.
+   ```
+
+**Restart your PC after these commands finish.**
+
 ---
 
-### Setup & Tools
+### 2. Required Installations
 
-1. **Antivirus:** Disable your AV. Create a dedicated folder and **exclude it** from scans.
-2. **Download Utilities:** Place these inside your excluded folder:
-   - [Sirhurt Cleaner](https://github.com/massimopaganigh/Sirstrap)
-   - [Sirstrap](https://github.com/massimopaganigh/Sirstrap) (CLI is recommended for easier config- Can use others (*whatever*strap) if they allow to manually set roblox build.).
-3. **Sirhurt:** Download sirhurt directly from the official downloads page. If using box link click top right on the starting page, otherwise it likely wont download.
-   > **Note:** Use **7-Zip** or **WinRAR** for extraction. The default Windows extractor can cause issues.
+Install **both x86 and x64** versions.
+
+#### Visual C++ (CPP) Redistributables
+
+- [VC Redist x86](https://aka.ms/vc14/vc_redist.x86.exe)
+- [VC Redist x64](https://aka.ms/vc14/vc_redist.x64.exe)
+
+#### .NET SDK & Runtimes (v10.0.201)
+
+- [SDK x64](https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.201/dotnet-sdk-10.0.201-win-x64.exe) | [SDK x86](https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.201/dotnet-sdk-10.0.201-win-x86.exe)
+- [Runtime x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-10.0.5-windows-x64-installer) | [Runtime x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-10.0.5-windows-x86-installer)
+- [Desktop Runtime x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.5-windows-x64-installer) | [Desktop Runtime x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.5-windows-x86-installer)
+
+**Restart your PC after installing these.**
 
 ---
 
-### Execution Steps for Beta Roblox Clients
+### 3. Setup & Tools
 
-1. **Run Sirstrap:** Wait for Roblox to download and open, then close it.
-2. **Run Sirhurt Cleaner:** Press `Y` + `Enter` for all prompts (including auth data—you will need to log in again during injection).
-3. **Restart PC.**
-4. **Open Sirstrap Roblox Instance.**
-5. **Run Bootstrapper:** Wait for it to finish downloading everything.
-6. **Kill Roblox Instances.**
-7. **Reopen Sirstrap:** (Via web or program).
-8. **Inject:** Log in when prompted. Do **not** manually inject again afterward; it will auto-inject after the login is successful.
+Proper environment setup is critical to prevent your Antivirus (AV) from deleting essential files.
+
+1. **Antivirus Exclusion:**
+   - Disable your AV temporarily.
+   - Create a dedicated folder (`C:\Users\whateveryourusernameis\Downloads\sirhurtian_utils` - You can name it whatever).
+   - Add this folder to your AV's **Exclusion/Whitelist** list. (often windows defender and/or malwarebytes)
+2. **Voidstrap (UNOFFICIAL Recommended Launcher):**
+   - [Download Voidstrap](https://github.com/voidstrap/Voidstrap)
+   - Voidstrap is a modern alternative to Sirstrap that allows for better configuration and Roblox build management.
+3. **Sirstrap (Sirhurt's Recommended Launcher):**
+   - [Download Sirstrap](https://github.com/massimopaganigh/Sirstrap)
+   - Sirstrap is less customizable, but is recommended for testing purposes with sirhurt.
+4. **SirHurt Bootstrapper:**
+   - Download directly from the official SirHurt site.
+   - Use **7-Zip** or **WinRAR** to extract files; the default Windows extractor can cause extraction errors alongside AV.
+
+---
+
+### 4. SirHurt Cleaner
+
+If you are still having issues, use the [SirHurt Cleaner](https://github.com/massimopaganigh/Sirstrap) (Bundled with Sirstrap utilities).
+
+- Press `Y` + `Enter` for all prompts. Then restart your PC and retry injection.
+- _This WILL clear your login data, so youll need to log in again._
+
+---
+
+### 5. Troubleshooting Steps
+
+Follow this exact sequence if injection fails:
+
+1. **Window Version Check:** Ensure you are on Windows **24H2** or higher.
+2. **Preparation:**
+   - Disable Roblox's `Minimize to tray when closed` setting.
+   - Temporarily disable Voice Chat on your account (unlikely, but can cause issues)
+3. **Launch Sequence:**
+   - Open Roblox via **Voidstrap/Sirstrap** and join a simple game (baseplate or default starting game).
+   - Run the SirHurt Bootstrapper as **Administrator**. Verify `sirhurt.dll` exists in the folder.
+4. **Injection:**
+   - Use the "Kill Processes" button in the UI after the bootstrapper fetches everything.
+   - Open Roblox again and join a game.
+   - Click **Inject**. Youll be prompted to log in.
+   - **Do NOT** click Inject again after logging in; it will handle the rest automatically.
