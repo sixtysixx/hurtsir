@@ -1,6 +1,6 @@
 # UNOFFICIAL SirHurt Troubleshooting Guide
 
-This guide provides comprehensive steps to resolve common issues with SirHurt injection and execution. Please read the guide and follow step by step (dont just fucking skim through it)
+This guide provides comprehensive steps to resolve common issues with SirHurt injection and execution. PLEASE read the guide and follow step by step (dont just fucking skim through it)
 
 ---
 
@@ -32,7 +32,7 @@ Run these commands in an **Administrator PowerShell** or **Command Prompt**:
    DISM /Online /Cleanup-Image /RestoreHealth
    ```
 
-5. **Missing Drivers** Finds and installs any outdated or missing drivers
+5. **OPTIONAL - Missing Drivers** Finds and installs any outdated or missing drivers, optional but recommended
 
    ```
    https://sourceforge.net/projects/snappy-driver-installer-origin/
