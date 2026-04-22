@@ -89,13 +89,13 @@ If you are still having issues, use the [SirHurt Cleaner](https://github.com/mas
 
 ### 5. Troubleshooting Steps
 
-Follow this exact sequence if injection fails:
+Follow the following steps if injection fails:
 
 1. **Window Version Check:** Ensure you are on Windows **24H2** or higher.
-2. **Preparation:**
+2. **Roblox Settings:**
    - Disable Roblox's `Minimize to tray when closed` setting.
    - Temporarily disable Voice Chat on your account (unlikely, but can cause issues)
-3. **Launch Sequence:**
+3. **Launching:**
    - Open Roblox via **Voidstrap/Sirstrap** and join a simple game (baseplate or default starting game).
    - Run the SirHurt Bootstrapper as **Administrator**. Verify `sirhurt.dll` exists in the folder.
 4. **Injection:**
