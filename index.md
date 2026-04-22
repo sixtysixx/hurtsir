@@ -32,7 +32,7 @@ Run these commands in an **Administrator PowerShell** or **Command Prompt**:
    DISM /Online /Cleanup-Image /RestoreHealth
    ```
 
-5. ***OPTIONAL*** - Missing Drivers** Finds and installs any outdated or missing drivers, optional but recommended in most cases.
+5. Driver Updater - Finds and installs any outdated or missing drivers, ***OPTIONAL*** but recommended in most cases.
 
    ```
    https://sourceforge.net/projects/snappy-driver-installer-origin/
