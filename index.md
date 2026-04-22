@@ -36,7 +36,13 @@ Run these commands in an **Administrator PowerShell** or **Command Prompt**:
 
    ```
    https://sourceforge.net/projects/snappy-driver-installer-origin/
-   - Click `Download latest release`, extract and run the automatic batch script, Index 'This PC Only', Install any missing or outdated drivers. I would 100% recommend a recovery point.
+   - Click `Download latest release`, extract the archive and run the `SDIO_auto` batch script.
+   - Choose to `Index This PC Only'. Turn on `Expert Mode`
+   - Toggle the following ON in the first menu: "Not installed, Newer, Better matches"
+   - Toggle the following ON in the second menu "Not Installed"
+   - Toggle ON "Show only best" in the last menu.
+   - Click "Select all" and Install any missing or outdated drivers.
+   - I would 100% recommend a recovery point.
    ```
 
 **Restart your PC after these commands finish.**
