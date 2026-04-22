@@ -52,11 +52,9 @@ Install **both x86 and x64** versions.
 - [VC Redist x86](https://aka.ms/vc14/vc_redist.x86.exe)
 - [VC Redist x64](https://aka.ms/vc14/vc_redist.x64.exe)
 
-#### .NET SDK & Runtimes (v10.0.201)
+#### .NET SDK & Runtimes
 
-- [SDK x64](https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.201/dotnet-sdk-10.0.201-win-x64.exe) | [SDK x86](https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.201/dotnet-sdk-10.0.201-win-x86.exe)
-- [Runtime x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-10.0.5-windows-x64-installer) | [Runtime x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-10.0.5-windows-x86-installer)
-- [Desktop Runtime x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.5-windows-x64-installer) | [Desktop Runtime x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.5-windows-x86-installer)
+- [SDK x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.107-windows-x64-installer) | [SDK x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.107-windows-x86-installer)
 
 **Restart your PC after installing these.**
 
@@ -64,15 +62,13 @@ Install **both x86 and x64** versions.
 
 ### 3. Setup & Tools
 
-Proper environment setup is critical to prevent your Antivirus (AV) from deleting essential files.
-
 1. **Antivirus Exclusion:**
    - Disable your AV temporarily.
    - Create a dedicated folder (`C:\Users\whateveryourusernameis\Downloads\sirhurtian_utils` - You can name it whatever).
    - Add this folder to your AV's **Exclusion/Whitelist** list. (often windows defender and/or malwarebytes)
 2. **Voidstrap (UNOFFICIAL Recommended Launcher):**
    - [Download Voidstrap](https://github.com/voidstrap/Voidstrap)
-   - Voidstrap is a modern alternative to Sirstrap that allows for better configuration and Roblox build management.
+   - Voidstrap is a alternative to Sirstrap that allows for better configuration and Roblox build management.
 3. **Sirstrap (Sirhurt's Recommended Launcher):**
    - [Download Sirstrap](https://github.com/massimopaganigh/Sirstrap)
    - Sirstrap is less customizable, but is recommended for testing purposes with sirhurt.
