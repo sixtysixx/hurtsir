@@ -73,7 +73,7 @@ Install **both x86 and x64** versions.
    - Create a dedicated folder (`C:\Users\whateveryourusernameis\Downloads\sirhurtian_utils` - You can name it whatever).
    - Add this folder to your AV's **Exclusion/Whitelist** list. (often windows defender and/or malwarebytes)
 2. **Sirstrap (Sirhurt's Recommended Launcher):**
-   - [Download Sirstrap](https://github.com/massimopaganigh/Sirstrap)
+   - [Download Sirstrap](https://massimopaganigh.github.io/Sirstrap/)
    - Sirstrap is less customizable, but is recommended for testing purposes with sirhurt.
 3. **SirHurt Bootstrapper:**
    - Download directly from the official SirHurt site.
@@ -83,7 +83,7 @@ Install **both x86 and x64** versions.
 
 ### 4. SirHurt Cleaner
 
-If you are still having issues, use the [SirHurt Cleaner](https://github.com/massimopaganigh/Sirstrap) (Bundled with Sirstrap utilities).
+If you are still having issues, use the [SirHurt Cleaner](https://massimopaganigh.github.io/Sirstrap/) (Bundled with Sirstrap).
 
 - Press `Y` + `Enter` for all prompts. Then restart your PC and retry injection.
 - _This WILL clear your app login data, so youll need to log in again- UNLESS youre using a browser._
