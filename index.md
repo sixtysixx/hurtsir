@@ -99,7 +99,7 @@ Follow the following steps if injection fails:
    - Disable Roblox's `Minimize to tray when closed` setting.
    - Temporarily disable Voice Chat on your account (unlikely, but can cause issues)
 3. **Launching:**
-   - Open Roblox via **Voidstrap/Sirstrap** and join a simple game (baseplate or default starting game).
+   - Open Roblox via **Sirstrap** and join a simple game (baseplate or default starting game).
    - Run the SirHurt Bootstrapper as **Administrator**. Verify `sirhurt.dll` exists in the folder.
 4. **Injection:**
    - Use the "Kill Processes" button in the UI after the bootstrapper fetches everything.
