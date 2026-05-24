@@ -113,6 +113,33 @@
     {{ content | safe }}
   </div>
   <script>
+    (function() {
+      if (!localStorage.getItem('guide_confirmed')) {
+        const overlay = document.getElementById('modal-overlay');
+        const btn = document.getElementById('confirm-btn');
+        document.body.classList.add('modal-open');
+        overlay.style.display = 'flex';
+
+        let timeLeft = 3;
+        const interval = setInterval(() => {
+          timeLeft--;
+          if (timeLeft > 0) {
+            btn.textContent = `Understood (${timeLeft}s)`;
+          } else {
+            clearInterval(interval);
+            btn.textContent = 'Understood';
+            btn.disabled = false;
+            btn.classList.add('active');
+          }
+        }, 1000);
+
+        btn.onclick = () => {
+          localStorage.setItem('guide_confirmed', 'true');
+          overlay.style.display = 'none';
+          document.body.classList.remove('modal-open');
+        };
+      }
+    })();
     const observer = new IntersectionObserver(entries => {
       entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
     }, { threshold: .1 });
