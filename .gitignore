@@ -1,2 +1,6 @@
-main.dist/
+node_modules/
+dist/
 troubleshoot_log.txt
+*.log
+.DS_Store
+Thumbs.db
