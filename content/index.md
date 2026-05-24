@@ -90,7 +90,7 @@ Run these commands in an **Administrator PowerShell** or **Command Prompt**:
 
 Install **both x86 and x64** versions.
 
-#### Visual C++ (CPP) Redistributables
+#### Visual C++ Redistributables
 
 - [VC Redist x86](https://aka.ms/vc14/vc_redist.x86.exe)
 - [VC Redist x64](https://aka.ms/vc14/vc_redist.x64.exe)
@@ -173,4 +173,4 @@ Follow the following steps if injection fails:
 </video>
 
 </div>
-UNOFFICIAL Guide - Made by <a href="https://discord.com/users/1045933816260350032">SYX</a> :3
+^_^ UNOFFICIAL Guide - Made by <a href="https://discord.com/users/1045933816260350032">SYX</a> ^_^
