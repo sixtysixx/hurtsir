@@ -5,7 +5,7 @@ title: UNOFFICIAL SirHurt Troubleshooting Guide
 
 # UNOFFICIAL SirHurt Troubleshooting Guide
 
-**PLEASE read the guide and follow it step by step ( dont just fucking skim through it pls :3 )**
+**PLEASE read the guide and follow it step by step ( dont just skim through it pls :3 )**
 <br>
 
 <div class="embed">
@@ -117,11 +117,13 @@ Install **both x86 and x64** versions.
    - Add this folder to your AV's **Exclusion/Whitelist** list. (often windows defender and/or malwarebytes)
 2. **Sirstrap (Sirhurt's Recommended Launcher):**
    - [Download Sirstrap](https://massimopaganigh.github.io/Sirstrap/)
-   - Sirstrap is less customizable, but is recommended for testing purposes with sirhurt.
-3. **SirHurt Bootstrapper:**
-   - Download directly from the official SirHurt site. If using the Box link, click **top right** on the starting page, otherwise it might not start the download.
-   - Place it in your excluded folder — **DO NOT EXTRACT YET**.
-   - Use **7-Zip** or **WinRAR** to extract later; the default Windows extractor can cause extraction errors alongside AV.
+   - Extract the archive and run the executable
+3. **SirHurt:**
+   - Download directly from the official [SirHurt](https://sirhurt.net/) site. If using the Box link, click **top right** on the starting page, otherwise it might not start the download. Recommended to use Gofile.
+   - Place it in your excluded folder and use **7-Zip** or **WinRAR** to extract; the default Windows extractor can cause extraction errors.
+   - Once extracted, open roblox and join a game. It should automatically use sirstrap for launching
+   - After roblox is open and youre in a game, open the extracted folder and run the bootstrapper (only necessary to run bootstrapper if there is a roblox update or sirhurt pushes an update)
+   - Press initialize / inject & wait for the bottom left indicator to turn green, then execute your script(s)
 
 </div>
 
@@ -134,7 +136,7 @@ If you are still having issues, use the [SirHurt Cleaner](https://massimopaganig
 - Press `Y` + `Enter` for all prompts.
 - Remove any leftover SirHurt folders after running it.
 - Then restart your PC and retry injection.
-- _This WILL clear your app login data, so youll need to log in again- UNLESS youre using a browser._
+- _This WILL clear your auth data, so youll need to log in again._
 
 </div>
 
@@ -142,7 +144,7 @@ If you are still having issues, use the [SirHurt Cleaner](https://massimopaganig
 
 ### 5. Troubleshooting Steps
 
-Follow the following steps if injection fails:w
+Follow the following steps if injection fails:
 
 1. **Window Version Check:** Ensure you are on Windows **24H2** or higher.
 2. **Roblox Settings:**
@@ -165,7 +167,7 @@ Follow the following steps if injection fails:w
 <video controls width="100%">
   <source src="https://r2.e-z.host/a466cf7c-0034-4d68-80d8-1c7ad54cf3c3/1co3ngj3.mp4" type="video/mp4">
 </video>
-<h4>Downgrade tutorial #2 - Using Sirstrap (Easier)</h4>
+<h4>Downgrade tutorial #2 - Using Sirstrap (Easier & Multi-instance support)</h4>
 <video controls width="100%">
   <source src="https://r2.e-z.host/a466cf7c-0034-4d68-80d8-1c7ad54cf3c3/fu6yfecw.mp4" type="video/mp4">
 </video>
