@@ -5,9 +5,8 @@ title: UNOFFICIAL SirHurt Troubleshooting Guide
 
 # UNOFFICIAL SirHurt Troubleshooting Guide
 
-**PLEASE read the guide and follow it step by step (DONT just fucking skim through it)**
+**PLEASE read the guide and follow it step by step ( dont just fucking skim through it pls :3 )**
 <br>
-(yes this UI was vibecoded lol)
 
 <div class="embed">
 
@@ -42,7 +41,7 @@ title: UNOFFICIAL SirHurt Troubleshooting Guide
 
 <div class="embed">
 
-### 1. System Repairs (SFC & DISM)
+### 1. System Repairs (SFC & DISM) - Classic Microslop response for literally nothing related to system corruption
 
 Run these commands in an **Administrator PowerShell** or **Command Prompt**:
 
@@ -96,13 +95,15 @@ Install **both x86 and x64** versions.
 - [VC Redist x86](https://aka.ms/vc14/vc_redist.x86.exe)
 - [VC Redist x64](https://aka.ms/vc14/vc_redist.x64.exe)
 
-> If these links become outdated, find the latest on [Microsoft's official site](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist).
+- If these links become outdated, find the latest versions on [Microsoft's site](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version).
 
 #### .NET SDK & Runtimes
 
 - [SDK x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.300-windows-x64-installer) | [SDK x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.300-windows-x86-installer)
 
   **RESTART your PC after installing these.**
+- If these links become outdated, find the latest versions on [Microsoft's site](https://dotnet.microsoft.com/en-us/download).
+- Click `Download .NET SDK x64` as well as under the dropdow menu `Download .NET SDK x86`
 
 </div>
 
@@ -160,9 +161,13 @@ Follow the following steps if injection fails:w
 
 </div>
 <div class="embed">
-<h4>Downgrade tutorial</h4>
+<h4>Downgrade tutorial - Manual</h4>
 <video controls width="100%">
   <source src="https://r2.e-z.host/a466cf7c-0034-4d68-80d8-1c7ad54cf3c3/1co3ngj3.mp4" type="video/mp4">
+</video>
+<h4>Downgrade tutorial #2 - Using Sirstrap (Easier)</h4>
+<video controls width="100%">
+  <source src="https://r2.e-z.host/a466cf7c-0034-4d68-80d8-1c7ad54cf3c3/fu6yfecw.mp4" type="video/mp4">
 </video>
 
 </div>
