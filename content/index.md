@@ -12,7 +12,7 @@ title: UNOFFICIAL SirHurt Troubleshooting Guide
 
 ### Quick Start
 
-1. Disable your AV temporarily.
+1. Disable your AV(antivirus) temporarily.
 2. Create a dedicated folder and exclude it from your AV.
 3. Place **Sirstrap**, **SirHurt Cleaner**, and **SirHurt** inside it. (DO NOT EXTRACT ANYTHING YET)
 4. Install both **VC Redist x86/x64** and the latest **.NET SDK**.
