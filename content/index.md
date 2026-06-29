@@ -99,7 +99,7 @@ Install **both x86 and x64** versions.
 
 #### .NET SDK & Runtimes
 
-- [SDK x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.300-windows-x64-installer) | [SDK x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.300-windows-x86-installer)
+- [SDK x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.301-windows-x64-installer) | [SDK x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.301-windows-x86-installer)
 
   **RESTART your PC after installing these.**
 - If these links become outdated, find the latest versions on [Microsoft's site](https://dotnet.microsoft.com/en-us/download).
