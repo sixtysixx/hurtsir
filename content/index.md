@@ -163,6 +163,9 @@ Follow the following steps if injection fails:
 
 </div>
 <div class="embed">
+
+> **Recommended Version (as of 7/4/2026):** `version-1a951716f19e4638`
+
 <h4>Downgrade tutorial - Manual</h4>
 <video controls width="100%">
   <source src="https://r2.e-z.host/a466cf7c-0034-4d68-80d8-1c7ad54cf3c3/1co3ngj3.mp4" type="video/mp4">
