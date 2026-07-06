@@ -20,10 +20,12 @@ title: UNOFFICIAL SirHurt Troubleshooting Guide
 6. Remove any leftover SirHurt folders (yes this includes any old sirhurt zips or folders).
 7. **Restart your PC.**
 8. Open Roblox.
-9. Extract Sirhurt (**7-Zip** preferred).
-10. Run the Bootstrapper as **Administrator**.
-11. Attempt to inject, then login.
-12. Execute a test script (e.g. **Infinite Yield**).
+9. Disable Roblox's both launch on startup & minimize to tray when closed settings
+10. Close and reopen Roblox
+11. Extract Sirhurt (**7-Zip** preferred).
+12. Run the Bootstrapper as **Administrator**.
+13. Attempt to inject, then login.
+14. Execute a test script (e.g. **Infinite Yield**).
 
 </div>
 
@@ -152,7 +154,7 @@ Follow the following steps if injection fails:
    - Temporarily disable Voice Chat on your account (unlikely, but can cause issues)
 3. **Launching:**
    - Open Roblox via **Sirstrap** and join a simple game (baseplate or default starting game).
-   - Run the SirHurt Bootstrapper as **Administrator**. Verify `sirhurt.dll` exists in the folder.
+   - Run the SirHurt Bootstrapper as **Administrator**.
 4. **Injection:**
    - Use the "Kill Processes" button in the UI after the bootstrapper fetches everything.
    - Open Roblox again and join a game.
