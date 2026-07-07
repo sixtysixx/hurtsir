@@ -1,5 +1,6 @@
 import os, sys, subprocess, ctypes, json
 
+VERSION = "1.0.0"
 # 1. Automatic Requirements Installation
 def install_reqs():
     try:
@@ -51,7 +52,62 @@ from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, Static, Button, RichLog, ContentSwitcher
 from textual.containers import Container
 from textual.binding import Binding
+from textual.screen import ModalScreen
 
+
+class UpdateModal(ModalScreen):
+    CSS = """
+    UpdateModal {
+        align: center middle;
+        background: rgba(0, 0, 0, 0.7);
+    }
+    
+    #dialog {
+        layout: vertical;
+        padding: 1 2;
+        width: 50;
+        height: auto;
+        border: thick #4A0072;
+        background: #111111;
+        color: #ffffff;
+    }
+    
+    #question {
+        text-align: center;
+        margin-bottom: 1;
+        height: auto;
+    }
+    
+    #buttons {
+        layout: horizontal;
+        height: auto;
+        align: center middle;
+        width: 100%;
+    }
+    
+    #buttons Button {
+        width: 15;
+        margin: 0 1;
+    }
+    """
+    
+    def __init__(self, remote_version: str, remote_content: str):
+        super().__init__()
+        self.remote_version = remote_version
+        self.remote_content = remote_content
+        
+    def compose(self) -> ComposeResult:
+        with Container(id="dialog"):
+            yield Static(f"[bold]Update Available[/bold]\n\nA new version ({self.remote_version}) of Roblox Monitor is available. Would you like to update now?", id="question")
+            with Container(id="buttons"):
+                yield Button("Yes", variant="success", id="yes")
+                yield Button("No", variant="error", id="no")
+                
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "yes":
+            self.dismiss(True)
+        else:
+            self.dismiss(False)
 class RobloxManager(App):
     CSS = """
     Screen {
@@ -276,6 +332,9 @@ class RobloxManager(App):
         self.update_logs()
         self.set_interval(1.0, self.update_logs)
         self.set_interval(3.0, self.update_status)
+        
+        # Check for updates in background
+        self.run_worker(self.check_for_updates, thread=True)
 
     def update_logging_button(self) -> None:
         btn = self.query_one("#toggle_logging", Button)
@@ -361,6 +420,42 @@ class RobloxManager(App):
                 log_widget.write(formatted_msg)
             except:
                 pass
+
+    def check_for_updates(self) -> None:
+        import urllib.request
+        import re
+        url = "https://raw.githubusercontent.com/sixtysixx/hurtsir/refs/heads/main/robloxMonitor/rblx.py"
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=5) as response:
+                remote_content = response.read().decode('utf-8')
+        except:
+            return
+            
+        match = re.search(r'VERSION\s*=\s*"([^"]+)"', remote_content)
+        if not match:
+            return
+        remote_version = match.group(1)
+        
+        if remote_version != VERSION:
+            self.call_after_refresh(self.show_update_modal, remote_version, remote_content)
+
+    def show_update_modal(self, remote_version: str, remote_content: str) -> None:
+        def modal_callback(update_approved: bool) -> None:
+            if update_approved:
+                self.perform_update(remote_content)
+        self.push_screen(UpdateModal(remote_version, remote_content), modal_callback)
+
+    def perform_update(self, new_code: str) -> None:
+        try:
+            self.write_local_log("Downloading and applying update...")
+            script_path = os.path.abspath(sys.argv[0])
+            with open(script_path, "w", encoding="utf-8") as f:
+                f.write(new_code)
+            self.write_local_log("Update applied. Restarting application...")
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        except Exception as e:
+            self.write_local_log(f"Failed to apply update: {e}")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "exit":
