@@ -20,7 +20,7 @@ title: UNOFFICIAL SirHurt Troubleshooting Guide
 6. Remove any leftover SirHurt folders (yes this includes any old sirhurt zips or folders).
 7. **Restart your PC.**
 8. Open Roblox.
-9. Disable Roblox's both launch on startup & minimize to tray when closed settings
+9. Disable Roblox's launch on startup & minimize to tray settings (see Section 6 to automate).
 10. Close and reopen Roblox
 11. Extract Sirhurt (**7-Zip** preferred).
 12. Run the Bootstrapper as **Administrator**.
@@ -150,7 +150,7 @@ Follow the following steps if injection fails:
 
 1. **Window Version Check:** Ensure you are on Windows **24H2** or higher.
 2. **Roblox Settings:**
-   - Disable Roblox's `Minimize to tray when closed` setting.
+   - Disable Roblox's `Minimize to tray when closed` setting (see Section 6 to automate).
    - Temporarily disable Voice Chat on your account (unlikely, but can cause issues)
 3. **Launching:**
    - Open Roblox via **Sirstrap** and join a simple game (baseplate or default starting game).
@@ -164,9 +164,42 @@ Follow the following steps if injection fails:
    - Execute a test script (e.g. **Infinite Yield**) to confirm it works.
 
 </div>
+
 <div class="embed">
 
-> **Recommended Version (as of 7/4/2026):** `version-1a951716f19e4638`
+### 6. Roblox Config Monitor
+
+Roblox frequently re-enables **"Launch on Startup"** and **"Minimize to tray when closed"** settings, which can cause injection failures.
+
+#### Setup & Installation
+
+1. **Download the Script:**
+   - Download the **[rblx.py](https://raw.githubusercontent.com/sixtysixx/hurtsir/refs/heads/main/robloxMonitor/rblx.py)** script directly and place it in a folder (e.g., `robloxMonitor`).
+
+2. **Install Prerequisites:**
+   - Install **Python (v3.8+)** or **[uv](https://astral.sh/uv)** (recommended fast Python installer).
+   - Ensure Python is added to your system's PATH during installation.
+
+3. **Run the Manager Tool:**
+   - Open Command Prompt or PowerShell as **Administrator**.
+   - Navigate to the directory containing `rblx.py`:
+     ```cmd
+     cd robloxMonitor
+     ```
+   - Start the manager:
+     - **With uv:** `uv run rblx.py`
+     - **With standard Python:** `python rblx.py` (The script will automatically attempt to install the required `textual` package if missing).
+
+4. **Register the Service:**
+   - Accept the UAC administrator prompt if it appears.
+   - In the Textual TUI interface, go to **Task Management** (or press `1`).
+   - Select **Register Task**. This registers a persistent Windows Scheduled Task (`RobloxConfigMonitor`) running silently under the SYSTEM account.
+   - You can start, stop, view real-time logs, or deregister/remove the service directly within this interface.
+
+</div>
+<div class="embed">
+
+> **Recommended Version (as of 7/7/2026):** `version-90f2fddd3b244ff6 (LIVE)`
 
 <h4>Downgrade tutorial - Manual</h4>
 <video controls width="100%">

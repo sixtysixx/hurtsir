@@ -1,0 +1,30 @@
+---
+Prerequisites
+---
+1. Install Python (v3.8+) or uv (recommended fast Python installer).
+   - If using Python, make sure to check "Add Python to PATH" during installation.
+
+---
+Setup & Launch
+---
+1. Open Command Prompt or PowerShell as Administrator.
+2. Navigate to this directory:
+   cd C:\path\to\hurtsir\robloxMonitor
+3. Run the manager application:
+   - With uv (recommended):
+     uv run rblx.py
+   - With standard Python:
+     python rblx.py
+     (The script will automatically install the required 'textual' package if missing)
+4. Accept the User Account Control (UAC) prompt if it appears.
+
+---
+Registering the Service
+---
+1. In the Textual interface, navigate using your arrow keys/tab or mouse.
+2. Go to "Task Management" (or press 1).
+3. Select "Register Task". This will:
+   - Create a background PowerShell script at C:\ProgramData\RobloxMonitor\monitor.ps1
+   - Create a Windows Scheduled Task named "RobloxConfigMonitor" running under the SYSTEM account.
+   - Start the service automatically.
+4. You can check the current status, stop/start the task, view logs, or deregister/remove the task at any time from this interface.
