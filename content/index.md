@@ -174,7 +174,7 @@ Roblox frequently re-enables **"Launch on Startup"** and **"Minimize to tray whe
 #### Setup & Installation
 
 1. **Download the Script:**
-   - Download the **[rblx.py](https://raw.githubusercontent.com/sixtysixx/hurtsir/refs/heads/main/robloxMonitor/rblx.py)** script directly and place it in a folder (e.g., `robloxMonitor`).
+   - Download the **[rblx.py](https://raw.githubusercontent.com/sixtysixx/hurtsir/refs/heads/main/robloxMonitor/rblx.py)** (Control + S) script directly and place it in a folder (e.g., `robloxMonitor`).
 
 2. **Install Prerequisites:**
    - Install **Python (v3.8+)** or **[uv](https://astral.sh/uv)** (recommended fast Python installer).
