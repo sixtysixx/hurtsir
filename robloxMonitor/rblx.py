@@ -345,14 +345,22 @@ class RobloxManager(App):
             pass
 
     def write_local_log(self, msg: str) -> None:
-        try:
-            os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
-            with open(self.log_file, "a", encoding="utf-8") as f:
-                import datetime
-                f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
-        except:
-            pass
-        self.update_logs()
+        import datetime
+        formatted_msg = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n"
+        if self.logging_enabled:
+            try:
+                os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
+                with open(self.log_file, "a", encoding="utf-8") as f:
+                    f.write(formatted_msg)
+            except:
+                pass
+            self.update_logs()
+        else:
+            try:
+                log_widget = self.query_one(RichLog)
+                log_widget.write(formatted_msg)
+            except:
+                pass
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "exit":
@@ -536,16 +544,17 @@ while ($true) {
                         }
                     }
                 } else {
-                    $roblox_dir = "C:\Users\$($user.Name)\AppData\Local\Roblox"
-                    if (Test-Path $roblox_dir) {
-                        $parent_dir = Split-Path -Parent $target
-                        if (!(Test-Path $parent_dir)) {
-                            New-Item -ItemType Directory -Force -Path $parent_dir | Out-Null
+                    $appdata_local = "C:\Users\$($user.Name)\AppData\Local"
+                    if (Test-Path $appdata_local) {
+                        $roblox_dir = Join-Path $appdata_local "Roblox"
+                        $local_storage_dir = Join-Path $roblox_dir "LocalStorage"
+                        if (!(Test-Path $local_storage_dir)) {
+                            New-Item -ItemType Directory -Force -Path $local_storage_dir | Out-Null
                         }
                         $json = '{"LaunchAtStartup":"false","MinimizeToTray":"false"}'
                         [System.IO.File]::WriteAllText($target, $json)
                         if ($logging_enabled) {
-                            log-msg "Created appStorage.json with disabled startup/tray in $target"
+                            log-msg "Created Roblox LocalStorage directory and appStorage.json with disabled startup/tray in $target"
                         }
                     }
                 }
