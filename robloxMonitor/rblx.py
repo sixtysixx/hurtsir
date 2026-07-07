@@ -252,6 +252,15 @@ class RobloxManager(App):
         self.last_pos = 0
         self.logging_enabled = True
         
+        # Ensure log file exists so that monitoring is active immediately
+        try:
+            os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
+            if not os.path.exists(self.log_file):
+                with open(self.log_file, "w", encoding="utf-8") as f:
+                    pass
+        except:
+            pass
+        
         # Load config
         config_path = r"C:\ProgramData\RobloxMonitor\config.json"
         if os.path.exists(config_path):
@@ -519,6 +528,25 @@ while ($true) {
                                 log-msg "Disabled LaunchAtStartup / MinimizeToTray in $target"
                             }
                         }
+                    } else {
+                        $json = '{"LaunchAtStartup":"false","MinimizeToTray":"false"}'
+                        [System.IO.File]::WriteAllText($target, $json)
+                        if ($logging_enabled) {
+                            log-msg "Initialized empty appStorage.json in $target"
+                        }
+                    }
+                } else {
+                    $roblox_dir = "C:\Users\$($user.Name)\AppData\Local\Roblox"
+                    if (Test-Path $roblox_dir) {
+                        $parent_dir = Split-Path -Parent $target
+                        if (!(Test-Path $parent_dir)) {
+                            New-Item -ItemType Directory -Force -Path $parent_dir | Out-Null
+                        }
+                        $json = '{"LaunchAtStartup":"false","MinimizeToTray":"false"}'
+                        [System.IO.File]::WriteAllText($target, $json)
+                        if ($logging_enabled) {
+                            log-msg "Created appStorage.json with disabled startup/tray in $target"
+                        }
                     }
                 }
             }
@@ -533,6 +561,15 @@ while ($true) {
     # Setup directory and files
     os.makedirs(r"C:\ProgramData\RobloxMonitor", exist_ok=True)
     with open(r"C:\ProgramData\RobloxMonitor\monitor.ps1", "w", encoding="utf-8") as f: f.write(monitor_code)
+    
+    # Ensure log file exists so that monitoring is active immediately
+    log_file_path = r"C:\ProgramData\RobloxMonitor\monitor.log"
+    if not os.path.exists(log_file_path):
+        try:
+            with open(log_file_path, "w", encoding="utf-8") as f:
+                pass
+        except:
+            pass
     
     # Set console size on Windows
     if sys.platform == "win32":
