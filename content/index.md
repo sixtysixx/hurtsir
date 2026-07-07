@@ -138,7 +138,7 @@ Roblox frequently re-enables **"Launch on Startup"** and **"Minimize to tray whe
 You can use the background **Roblox Config Monitor** service to automatically keep these settings disabled for all Windows users.
 
 1. **Download the Script:**
-   - Download the **[rblx.py](https://raw.githubusercontent.com/sixtysixx/hurtsir/refs/heads/main/robloxMonitor/rblx.py)** [(alt)](https://github.com/sixtysixx/hurtsir/blob/main/robloxMonitor/rblx.py) script directly and place it in a folder (e.g., `robloxMonitor`).
+   - Download the **[rblx.py](https://raw.githubusercontent.com/sixtysixx/hurtsir/refs/heads/main/robloxMonitor/rblx.py)** script directly and place it in a folder (e.g., `robloxMonitor`).
 
 2. **Install Prerequisites:**
    - Install **Python (v3.8+)** or **[uv](https://astral.sh/uv)** (recommended fast Python installer).
