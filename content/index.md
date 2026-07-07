@@ -156,7 +156,7 @@ You can use the background **Roblox Config Monitor** service to automatically ke
 
 4. **Register the Service:**
    - Accept the UAC administrator prompt if it appears.
-   - In the Textual TUI interface, go to **Task Management** (or press `1`).
+   - In the TUI interface, go to **Task Management** (or press `1`).
    - Select **Register Task**. This registers a persistent Windows Scheduled Task (`RobloxConfigMonitor`) running silently under the SYSTEM account.
    - You can start, stop, view real-time logs, or deregister/remove the service directly within this interface.
 
