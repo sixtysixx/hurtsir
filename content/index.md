@@ -199,16 +199,11 @@ Follow these steps if injection fails:
 
 <div class="embed">
 
-> **Recommended Version (as of 7/10/2026):** `version-460909c4fe904aae`
+> **Recommended Version (as of 7/10/2026):** `version-1a951716f19e4638`
 
 #### Downgrade Tutorial - Manual
 <video controls width="100%">
   <source src="https://r2.e-z.host/a466cf7c-0034-4d68-80d8-1c7ad54cf3c3/1co3ngj3.mp4" type="video/mp4">
-</video>
-
-#### Downgrade Tutorial #2 - Using Sirstrap (Easier & Multi-instance support)
-<video controls width="100%">
-  <source src="https://r2.e-z.host/a466cf7c-0034-4d68-80d8-1c7ad54cf3c3/fu6yfecw.mp4" type="video/mp4">
 </video>
 
 </div>
