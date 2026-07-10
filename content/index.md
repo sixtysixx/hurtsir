@@ -208,4 +208,4 @@ Follow these steps if injection fails:
 
 </div>
 
-^_^ UNOFFICIAL Guide - Made by <a href="https://discord.com/users/1045933816260350032">SYX</a> ^_^
+UNOFFICIAL Guide - Made by <a href="https://discord.com/users/1045933816260350032">SIX</a>
