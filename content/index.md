@@ -199,7 +199,7 @@ Follow these steps if injection fails:
 
 <div class="embed">
 
-> **Recommended Version (as of 7/7/2026):** `version-90f2fddd3b244ff6 (LIVE)`
+> **Recommended Version (as of 7/10/2026):** `version-460909c4fe904aae`
 
 #### Downgrade Tutorial - Manual
 <video controls width="100%">
