@@ -199,7 +199,7 @@ Follow these steps if injection fails:
 
 <div class="embed">
 
-> **Recommended Version (as of 7/10/2026):** `[version-1a951716f19e4638](https://sirhurt.net/downgradetutorial.php?version=version-1a951716f19e4638)`
+> **Recommended Version (as of 7/16/2026):** `[version-1a951716f19e4638](https://sirhurt.net/downgradetutorial.php?version=version-1a951716f19e4638)`
 
 #### Downgrade Tutorial - Manual
 <video controls width="100%">
