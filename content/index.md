@@ -93,7 +93,7 @@ Install **both x86 and x64** versions of the following prerequisites.
 *If these links become outdated, find the latest versions on [Microsoft's site](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version).*
 
 #### .NET SDK & Runtimes
-- [SDK x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.301-windows-x64-installer) | [SDK x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.301-windows-x86-installer)
+- [SDK x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.400-windows-x64-installer) | [SDK x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.400-windows-x86-installer)
 
 **RESTART your PC after installing these.**
 *If these links become outdated, find the latest versions on [Microsoft's site](https://dotnet.microsoft.com/en-us/download).*
@@ -111,8 +111,8 @@ Install **both x86 and x64** versions of the following prerequisites.
    - Add this folder to your AV's **Exclusion / Whitelist** (e.g. Windows Defender, Malwarebytes).
 
 2. **Sirstrap (SirHurt's Recommended Launcher):**
-   - [Download Sirstrap](https://massimopaganigh.github.io/Sirstrap/)
-   - Extract the archive and run the executable.
+   - [Download Sirstrap](https://discord.com/channels/1364170844867399722/1364173991165562967/1539928721820098610)
+   - Extract the archive and run the executable. Join the discord for access to new sirstrap link
 
 3. **SirHurt:**
    - Download directly from the official [SirHurt](https://sirhurt.net/) site. If using the Box link, click **top right** on the starting page, otherwise it might not start the download (recommended to use Gofile).
@@ -125,40 +125,14 @@ Install **both x86 and x64** versions of the following prerequisites.
 
 <div class="embed">
 
-### 4. Roblox Configuration & Monitor
+### 4. Roblox Configuration
 
-Roblox frequently re-enables **"Launch on Startup"** and **"Minimize to tray when closed"** settings, which can cause injection failures. You can disable these manually or use the automated background monitor.
+Roblox frequently re-enables **"Launch on Startup"** and **"Minimize to tray when closed"** settings, which can cause injection failures.
 
-#### Option A: Manual Configuration
+#### Manual Configuration
 - Open Roblox settings.
 - Disable **Launch on startup** and **Minimize to tray when closed**.
 - Close and reopen Roblox to apply.
-
-#### Option B: Automated Roblox Config Monitor
-You can use the background **Roblox Config Monitor** service to automatically keep these settings disabled for all Windows users.
-
-1. **Download the Script:**
-   - Download the **[rblx.py](https://raw.githubusercontent.com/sixtysixx/hurtsir/refs/heads/main/robloxMonitor/rblx.py)** script directly and place it in a folder (e.g., `robloxMonitor`).
-
-2. **Install Prerequisites:**
-   - Install **Python (v3.8+)** or **[uv](https://astral.sh/uv)** (recommended fast Python installer).
-   - Ensure Python is added to your system's PATH during installation.
-
-3. **Run the Manager Tool:**
-   - Open Command Prompt or PowerShell as **Administrator**.
-   - Navigate to the directory containing `rblx.py`:
-     ```cmd
-     cd robloxMonitor
-     ```
-   - Start the manager:
-     - **With uv:** `uv run rblx.py`
-     - **With standard Python:** `python rblx.py` (The script will automatically attempt to install the required `textual` package if missing).
-
-4. **Register the Service:**
-   - Accept the UAC administrator prompt if it appears.
-   - In the TUI interface, go to **Task Management** (or press `1`).
-   - Select **Register Task**. This registers a persistent Windows Scheduled Task (`RobloxConfigMonitor`) running silently under the SYSTEM account.
-   - You can start, stop, view real-time logs, or deregister/remove the service directly within this interface.
 
 </div>
 
@@ -199,7 +173,7 @@ Follow these steps if injection fails:
 
 <div class="embed">
 
-> **Recommended Version (as of 7/16/2026):** [version-1a951716f19e4638](https://sirhurt.net/downgradetutorial.php?version=version-1a951716f19e4638)
+> **Recommended Version (as of 8/22/2026):** [version-ce0bcd0fbd484804](https://sirhurt.net/downgradetutorial.php?version=version-ce0bcd0fbd484804)
 
 #### Downgrade Tutorial - Manual
 <video controls width="100%">
