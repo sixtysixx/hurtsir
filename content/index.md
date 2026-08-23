@@ -90,10 +90,10 @@ Install **both x86 and x64** versions of the following prerequisites.
 #### Visual C++ Redistributables
 - [VC Redist x86](https://aka.ms/vc14/vc_redist.x86.exe)
 - [VC Redist x64](https://aka.ms/vc14/vc_redist.x64.exe)
-*If these links become outdated, find the latest versions on [Microsoft's site](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version).*
 
 #### .NET SDK & Runtimes
 - [SDK x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.400-windows-x64-installer) | [SDK x86](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-10.0.400-windows-x86-installer)
+- *If these links become outdated, find the latest versions on [Microsoft's site](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version).*
 
 **RESTART your PC after installing these.**
 *If these links become outdated, find the latest versions on [Microsoft's site](https://dotnet.microsoft.com/en-us/download).*
