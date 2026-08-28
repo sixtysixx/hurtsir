@@ -53,7 +53,7 @@ Run these commands in an **Administrator PowerShell**
    ```
 
 2. **Driver Updater:** Finds and installs any outdated or missing drivers (**OPTIONAL** but recommended).
-   [Snappy Driver Installer Origin (SDIO)](https://sourceforge.net/projects/snappy-driver-installer-origin/)
+   [Snappy Driver Installer Origin (SDIO)](https://sourceforge.net/projects/snappy-driver-installer-origin/) ([Direct Link](https://www.glenn.delahoy.com/downloads/sdio/SDIO.zip))
    - Click `Download latest release`, extract the archive and run the `SDIO_auto` batch script.
    - Choose to `Index This PC Only`. Turn on `Expert Mode`.
    - Toggle the following ON in the first menu: "Not installed, Newer, Better matches".
