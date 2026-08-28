@@ -90,7 +90,7 @@ Install **both x86 and x64** versions of the following prerequisites.
 
 1. **Antivirus Exclusion:**
    - Disable your AV temporarily.
-   - Create a dedicated folder (e.g. `C:\Users\whateveryourusernameis\Downloads\sirhurtian_utils`).
+   - Create a dedicated folder
    - Add this folder to your AV's **Exclusion / Whitelist** (e.g. Windows Defender, Malwarebytes).
 
 2. **Sirstrap (SirHurt's Recommended Launcher):**
