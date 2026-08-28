@@ -111,9 +111,9 @@ Install **both x86 and x64** versions of the following prerequisites.
    - Add this folder to your AV's **Exclusion / Whitelist** (e.g. Windows Defender, Malwarebytes).
 
 2. **Sirstrap (SirHurt's Recommended Launcher):**
-   - [Download Sirstrap](https://discord.com/channels/1364170844867399722/1364173991165562967/1539928721820098610)
-   - Extract the archive and run the executable. Join the discord for access to new sirstrap link
-
+   - [Download Sirstrap](https://i-nagap.github.io/Sirstrap/)
+   - Extract the archive and run the executable.
+   
 3. **SirHurt:**
    - Download directly from the official [SirHurt](https://sirhurt.net/) site. If using the Box link, click **top right** on the starting page, otherwise it might not start the download (recommended to use Gofile).
    - Place it in your excluded folder and use **7-Zip** or **WinRAR** to extract; the default Windows extractor can cause extraction errors.
@@ -140,7 +140,7 @@ Roblox frequently re-enables **"Launch on Startup"** and **"Minimize to tray whe
 
 ### 5. SirHurt Cleaner
 
-If you are still having issues, use the [SirHurt Cleaner](https://massimopaganigh.github.io/Sirstrap/) (bundled with Sirstrap).
+If you are still having issues, use the [SirHurt Cleaner](https://i-nagap.github.io/Sirstrap/) (bundled with Sirstrap).
 
 - Press `Y` + `Enter` for all prompts.
 - Remove any leftover SirHurt folders after running it.
