@@ -45,26 +45,11 @@ title: UNOFFICIAL SirHurt Troubleshooting Guide
 
 ### 1. System Repairs (SFC & DISM)
 
-Run these commands in an **Administrator PowerShell** or **Command Prompt**:
+Run these commands in an **Administrator PowerShell**
 
-1. **SFC Scan:** Fixes corrupted system files.
+1. **SFC & DISM Scan:** Fixes corrupted system files.
    ```cmd
-   sfc /scannow
-   ```
-
-2. **DISM Health Check:** Checks for component store corruption.
-   ```cmd
-   DISM /Online /Cleanup-Image /CheckHealth
-   ```
-
-3. **DISM Scan Health:** Scans the Windows image for corruption.
-   ```cmd
-   DISM /Online /Cleanup-Image /ScanHealth
-   ```
-
-4. **DISM Restore Health:** Repairs the Windows image using Windows Update.
-   ```cmd
-   DISM /Online /Cleanup-Image /RestoreHealth
+   try { sfc /scannow; DISM /Online /Cleanup-Image /CheckHealth; DISM /Online /Cleanup-Image /ScanHealth; DISM /Online /Cleanup-Image /RestoreHealth; Write-Host -ForegroundColor Green "SUCCESS: System repair chain executed successfully." } catch { Write-Host -ForegroundColor Red "ERROR: System repair chain failed: $_" }
    ```
 
 5. **Driver Updater:** Finds and installs any outdated or missing drivers (**OPTIONAL** but recommended).
@@ -76,8 +61,6 @@ Run these commands in an **Administrator PowerShell** or **Command Prompt**:
    - Toggle ON "Show only best" in the last menu.
    - Click "Select all" and install any missing or outdated drivers.
    - *It is highly recommended to create a system recovery point first.*
-
-**Restart your PC after these commands finish.**
 
 </div>
 
