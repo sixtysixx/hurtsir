@@ -8,9 +8,9 @@
 #    4. Sets MinimizeToTray / LaunchAtStartup = false in
 #       %localappdata%\Roblox\localStorage\appStorage.json
 #    5. Creates the dedicated SirHurt folder, adds it to the
-#       antivirus (Windows Defender) exclusions, downloads the
-#       SirHurt archive from the official Gofile mirror and
-#       extracts it with 7-Zip into the excluded folder
+#      antivirus (Windows Defender) exclusions, then downloads the
+#      SirHurt archive (Gofile mirror first, manual download from
+#      sirhurt.net as fallback) and extracts it with 7-Zip
 #
 #  Run with:  right-click -> Run with PowerShell   (it self-elevates)
 #            or: powershell -ExecutionPolicy Bypass -File setup_sirhurt.ps1
@@ -31,6 +31,7 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference    = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+
 # ----------------------------------------------------------------------------
 # 0. Self-elevate to Administrator (needed for installers + AV exclusions)
 # ----------------------------------------------------------------------------
@@ -43,6 +44,10 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     )
     exit
 }
+
+# Log everything - the elevated window closes on exit, so keep a transcript
+# the user can check afterwards if something goes wrong.
+Start-Transcript -Path (Join-Path $env:TEMP 'sirhurt_setup.log') -Force | Out-Null
 
 $script:UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
 
@@ -65,7 +70,9 @@ function Get-File {
     return $Out
 }
 
-# ----------------------------------------------------------------------------
+# All of steps 1-5 are best-effort: a failure here is reported but must
+# NEVER prevent steps 6-7 (scheduled task + restart) from running.
+try {
 # 1. Visual C++ Redistributables (x64 + x86)
 # ----------------------------------------------------------------------------
 Write-Step 'Step 1/7 - Visual C++ Redistributables (x64 + x86)'
@@ -180,7 +187,6 @@ try {
 }
 
 # --- SirHurt download via the official Gofile mirror -----------------------
-$archive = Join-Path $SirHurtDir 'SirHurt V5.zip'
 
 $gofileCode = 'RE0cXfkA'
 
@@ -219,27 +225,39 @@ function Get-GofileDownloadLink {
 }
 
 Write-Host "  Resolving SirHurt download link from Gofile ($gofileCode) ..." -ForegroundColor DarkGray
-$goToken = Get-GofileToken
-$link, $remoteMd5 = Get-GofileDownloadLink -ShareCode $gofileCode -AccountToken $goToken
-Write-Host "  Download link resolved: $link" -ForegroundColor DarkGray
-
-$needDownload = -not (Test-Path $archive)
-if (-not $needDownload -and $remoteMd5) {
-    $localMd5 = (Get-FileHash -Path $archive -Algorithm MD5).Hash.ToLower()
-    if ($localMd5 -ne $remoteMd5) {
-        Write-Warn2 "Existing archive hash mismatch ($localMd5) - redownloading"
-        $needDownload = $true
-    }
-}
-if ($needDownload) {
+$downloaded = $false
+try {
+    $goToken = Get-GofileToken
+    $link, $remoteMd5 = Get-GofileDownloadLink -ShareCode $gofileCode -AccountToken $goToken
+    Write-Host "  Download link resolved: $link" -ForegroundColor DarkGray
+    $archive = Join-Path $SirHurtDir 'SirHurt V5.zip'
     Get-File -Url $link -Out $archive
-} else {
-    Write-Ok 'Existing archive verified (md5 match)'
+    $downloaded = $true
+    Write-Ok 'Downloaded via Gofile'
+} catch {
+    Write-Warn2 "Automated Gofile download failed: $($_.Exception.Message)"
+    Write-Warn2 '(Gofile blocks guest API accounts from listing files)'
+}
+
+if (-not $downloaded) {
+    Write-Host ''
+    Write-Host '  ACTION REQUIRED - download SirHurt manually:' -ForegroundColor Yellow
+    Write-Host '    1. The official site is opening in your browser.' -ForegroundColor Yellow
+    Write-Host "    2. Save the SirHurt archive (zip/rar/7z) into: $SirHurtDir" -ForegroundColor Yellow
+    Start-Process 'https://sirhurt.net/'
+    Read-Host '  Press Enter once the archive is saved'
+    $found = Get-ChildItem -Path $SirHurtDir -File |
+        Where-Object { $_.Extension -in '.zip', '.rar', '.7z' } |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+    if (-not $found) { throw "No SirHurt archive (zip/rar/7z) found in $SirHurtDir" }
+    $archive = $found.FullName
+    Write-Ok "Using archive: $archive"
 }
 
 if ($remoteMd5) {
     $localMd5 = (Get-FileHash -Path $archive -Algorithm MD5).Hash.ToLower()
-    if ($localMd5 -ne $remoteMd5) { throw "Downloaded archive md5 mismatch ($localMd5 != $remoteMd5)" }
+    if ($localMd5 -ne $remoteMd5) { throw "Archive md5 mismatch ($localMd5 != $remoteMd5)" }
     Write-Ok "Archive integrity verified (md5 $remoteMd5)"
 }
 
@@ -260,6 +278,12 @@ if ($sevenZip -and (Test-Path $sevenZip)) {
 }
 
 
+} catch {
+    Write-Host ''
+    Write-Warn2 "Setup step failed: $($_.Exception.Message)"
+    Write-Warn2 'Continuing anyway - the restart and post-logon task still run.'
+    Write-Warn2 "Full log: $env:TEMP\sirhurt_setup.log"
+}
 
 # ----------------------------------------------------------------------------
 # 6. One-shot scheduled task: open the game page in the default browser
@@ -290,6 +314,7 @@ Write-Step 'Step 7/7 - Restarting automatically'
 Write-Host '  The PC will RESTART in 15 seconds - save your work!' -ForegroundColor Yellow
 Write-Host "  After logon the default browser opens: $gameUrl" -ForegroundColor Yellow
 
+# /g restarts AND re-opens signed-in apps; /a aborts if the user needs to cancel
 shutdown.exe /g /t 15 /c 'SirHurt setup finished - restarting to complete installation'
 
 Write-Step 'ALL DONE'
