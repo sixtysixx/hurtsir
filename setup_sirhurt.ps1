@@ -8,9 +8,9 @@
 #    4. Sets MinimizeToTray / LaunchAtStartup = false in
 #       %localappdata%\Roblox\localStorage\appStorage.json
 #    5. Creates the dedicated SirHurt folder, adds it to the
-#      antivirus (Windows Defender) exclusions, then downloads the
-#      SirHurt archive (Gofile mirror first, manual download from
-#      sirhurt.net as fallback) and extracts it with 7-Zip
+#       antivirus (Windows Defender) exclusions, then waits for you to
+#       download the SirHurt archive (watches Downloads/Desktop/Documents
+#       every 5 s, moves it to the safe folder) and extracts it with 7-Zip
 #
 #  Run with:  right-click -> Run with PowerShell   (it self-elevates)
 #            or: powershell -ExecutionPolicy Bypass -File setup_sirhurt.ps1
@@ -186,95 +186,94 @@ try {
     Read-Host 'Press Enter once the AV exclusion is in place'
 }
 
-# --- SirHurt download via the official Gofile mirror -----------------------
 
-$gofileCode = 'RE0cXfkA'
+# --- SirHurt download: user downloads manually, script watches for it -------
 
-function Get-GofileToken {
-    # Mint a fresh guest account (Gofile API works only with a bearer token)
-    $acc = Invoke-RestMethod -Method Post -Uri 'https://api.gofile.io/accounts' -UserAgent $script:UA
-    if ($acc.status -ne 'ok') { throw "Gofile account creation failed: $($acc.status)" }
-    return $acc.data.token
+Write-Host ''
+Write-Host '  ACTION REQUIRED - download SirHurt manually:' -ForegroundColor Yellow
+Write-Host '    1. The official site is opening in your browser.' -ForegroundColor Yellow
+Write-Host '    2. Save the SirHurt archive (zip/rar/7z) anywhere in' -ForegroundColor Yellow
+Write-Host '       Downloads, Desktop or Documents.' -ForegroundColor Yellow
+Write-Host "    3. It will be detected automatically and moved to $SirHurtDir" -ForegroundColor Yellow
+Start-Process 'https://sirhurt.net/login/download.php'
+
+function Find-SirHurtArchive {
+    # Newest zip/rar/7z in Downloads / Desktop / Documents (top level only).
+    # Prefer files with 'sirhurt' in the name; otherwise only accept archives
+    # that appeared AFTER the watcher started (skips old unrelated downloads).
+    $dirs = @(
+        (Join-Path $env:USERPROFILE 'Downloads'),
+        (Join-Path $env:USERPROFILE 'Desktop'),
+        (Join-Path $env:USERPROFILE 'Documents')) | Where-Object { Test-Path $_ }
+    $hits = Get-ChildItem -Path $dirs -File -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.Extension -in '.zip', '.rar', '.7z' -and
+            ($_.Name -match 'sirhurt' -or $_.CreationTime -gt $script:watchStart)
+        }
+    $hits | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 }
 
-function Get-GofileDownloadLink {
-    param([string]$ShareCode, [string]$AccountToken)
-    # wt = sha256(UA::language::token::ts::SECRET); ts = 4h epoch window
-    $secret  = '12af056dacea0b'
-    $ts      = [string][long][math]::Floor([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() / 14400)
-    $raw     = "$script:UA::en-US::$AccountToken::$ts::$secret"
-    $sha     = [System.Security.Cryptography.SHA256]::Create()
-    $wt      = ($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($raw)) | ForEach-Object { $_.ToString('x2') }) -join ''
-
-    $headers = @{
-        'Authorization'   = "Bearer $AccountToken"
-        'X-Website-Token' = $wt
-        'X-BL'            = 'en-US'
+$script:watchStart = Get-Date
+Write-Host '  Watching Downloads / Desktop / Documents for the archive (5 s interval)...' -ForegroundColor DarkGray
+$archive = $null
+while (-not $archive) {
+    Start-Sleep -Seconds 5
+    $found = Find-SirHurtArchive
+    if ($found) {
+        # Give the browser time to finish writing, then require a stable size
+        # across two checks so we never move a half-downloaded file.
+        $size1 = $found.Length
+        Start-Sleep -Seconds 3
+        $found2 = Find-SirHurtArchive
+        if ($found2 -and $found2.FullName -eq $found.FullName -and $found2.Length -eq $size1) {
+            $archive = Join-Path $SirHurtDir 'SirHurt V5.zip'
+            Move-Item -LiteralPath $found.FullName -Destination $archive -Force
+            Write-Ok "Detected and moved: $($found.Name) -> $archive"
+        }
     }
-    $folder = Invoke-RestMethod -Uri "https://api.gofile.io/contents/$ShareCode?page=1&pageSize=100&sortField=name&sortDirection=1" `
-        -Headers $headers -UserAgent $script:UA
-    if ($folder.status -ne 'ok' -or -not $folder.data.children) {
-        throw "Gofile folder listing failed: $($folder.status)"
-    }
-    $file = $folder.data.children.PSObject.Properties.Value |
-        Where-Object { $_.type -eq 'file' } |
-        Sort-Object createTime -Descending |
-        Select-Object -First 1
-    if (-not $file) { throw 'No files found in the Gofile folder' }
-    return $file.link, $file.md5
 }
 
-Write-Host "  Resolving SirHurt download link from Gofile ($gofileCode) ..." -ForegroundColor DarkGray
-$downloaded = $false
-try {
-    $goToken = Get-GofileToken
-    $link, $remoteMd5 = Get-GofileDownloadLink -ShareCode $gofileCode -AccountToken $goToken
-    Write-Host "  Download link resolved: $link" -ForegroundColor DarkGray
-    $archive = Join-Path $SirHurtDir 'SirHurt V5.zip'
-    Get-File -Url $link -Out $archive
-    $downloaded = $true
-    Write-Ok 'Downloaded via Gofile'
-} catch {
-    Write-Warn2 "Automated Gofile download failed: $($_.Exception.Message)"
-    Write-Warn2 '(Gofile blocks guest API accounts from listing files)'
-}
-
-if (-not $downloaded) {
-    Write-Host ''
-    Write-Host '  ACTION REQUIRED - download SirHurt manually:' -ForegroundColor Yellow
-    Write-Host '    1. The official site is opening in your browser.' -ForegroundColor Yellow
-    Write-Host "    2. Save the SirHurt archive (zip/rar/7z) into: $SirHurtDir" -ForegroundColor Yellow
-    Start-Process 'https://sirhurt.net/'
-    Read-Host '  Press Enter once the archive is saved'
-    $found = Get-ChildItem -Path $SirHurtDir -File |
-        Where-Object { $_.Extension -in '.zip', '.rar', '.7z' } |
-        Sort-Object LastWriteTime -Descending |
-        Select-Object -First 1
-    if (-not $found) { throw "No SirHurt archive (zip/rar/7z) found in $SirHurtDir" }
-    $archive = $found.FullName
-    Write-Ok "Using archive: $archive"
-}
-
-if ($remoteMd5) {
-    $localMd5 = (Get-FileHash -Path $archive -Algorithm MD5).Hash.ToLower()
-    if ($localMd5 -ne $remoteMd5) { throw "Archive md5 mismatch ($localMd5 != $remoteMd5)" }
-    Write-Ok "Archive integrity verified (md5 $remoteMd5)"
-}
-
-# --- Extract with 7-Zip into the excluded folder ---
+# --- Extract with 7-Zip into the excluded folder ----------------------------
+# SirHurt V5 web zip is DOUBLE zipped: the downloaded archive contains
+# "sirhurt v5.zip", which itself holds the actual files. Extract both layers.
 $extractDir = Join-Path $SirHurtDir 'SirHurt'
 New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
-if ($sevenZip -and (Test-Path $sevenZip)) {
-    & $sevenZip x $archive -o"$extractDir" -y -bso0 -bsp0
-    if ($LASTEXITCODE -eq 0) { Write-Ok "Extracted to: $extractDir" }
-    else { Write-Warn2 "7-Zip exit code $LASTEXITCODE - try extracting manually with 7-Zip/WinRAR" }
-} else {
-    try {
-        Expand-Archive -Path $archive -DestinationPath $extractDir -Force
-        Write-Ok "Extracted (Expand-Archive) to: $extractDir"
-    } catch {
-        Write-Warn2 "Expand-Archive failed ($($_.Exception.Message)) - extract manually with 7-Zip/WinRAR"
+
+function Expand-SirHurtArchive {
+    param([string]$Path, [string]$Dest)
+    if ($sevenZip -and (Test-Path $sevenZip)) {
+        & $sevenZip x $Path -o"$Dest" -y -bso0 -bsp0
+        return ($LASTEXITCODE -eq 0)
     }
+    try {
+        Expand-Archive -Path $Path -DestinationPath $Dest -Force
+        return $true
+    } catch {
+        Write-Warn2 "Expand-Archive failed ($($_.Exception.Message))"
+        return $false
+    }
+}
+
+if (Expand-SirHurtArchive -Path $archive -Dest $extractDir) {
+    Write-Ok "Extracted outer archive to: $extractDir"
+
+    # Layer 2: find the inner "sirhurt v5.zip" and extract it in place
+    $inner = Get-ChildItem -Path $extractDir -Recurse -Filter '*.zip' -File |
+        Sort-Object Length -Descending |
+        Select-Object -First 1
+    if ($inner) {
+        $innerDest = $inner.DirectoryName
+        if (Expand-SirHurtArchive -Path $inner.FullName -Dest $innerDest) {
+            Write-Ok "Extracted inner archive: $($inner.Name)"
+            Remove-Item -LiteralPath $inner.FullName -Force -ErrorAction SilentlyContinue
+        } else {
+            Write-Warn2 "Failed to extract inner zip: $($inner.FullName) - extract it manually"
+        }
+    } else {
+        Write-Host '  No inner zip found (single-layer archive) - continuing.' -ForegroundColor DarkGray
+    }
+} else {
+    Write-Warn2 "Extraction failed - extract $archive manually with 7-Zip/WinRAR into $extractDir"
 }
 
 
