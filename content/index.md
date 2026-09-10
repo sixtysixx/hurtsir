@@ -73,7 +73,7 @@ If injection fails:
 <div class="embed">
 
 ### 5. Downgrade Tutorial
-> **Recommended Version (as of 8/22/2026):** [version-ce0bcd0fbd484804](https://sirhurt.net/downgradetutorial.php?version=version-ce0bcd0fbd484804)
+> **Recommended Version (as of 9/09/2026):** [version-e7d81637d42c4b23](https://sirhurt.net/downgradetutorial.php?version=version-e7d81637d42c4b23)
 
 <video controls width="100%">
   <source src="https://r2.e-z.host/a466cf7c-0034-4d68-80d8-1c7ad54cf3c3/1co3ngj3.mp4" type="video/mp4">
