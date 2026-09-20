@@ -1,0 +1,39 @@
+---
+// Wraps Starlight's own footer (rather than reimplementing it) so pagination,
+// edit links and last-updated keep working across Starlight upgrades.
+import DefaultFooter from '@astrojs/starlight/components/Footer.astro';
+---
+
+<DefaultFooter />
+
+<div class="page-credit">
+  <p class="page-credit-text">
+    Made by <a href="https://discord.com/users/1045933816260350032" target="_blank" rel="noopener">SIX</a> - Report Issues to them.
+  </p>
+</div>
+
+<style>
+  .page-credit {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    margin-top: 2.5rem;
+    text-align: right;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+
+  .page-credit-text {
+    margin: 0;
+  }
+
+  .page-credit-text a {
+    color: var(--sl-color-accent);
+    text-decoration: none;
+  }
+
+  .page-credit-text a:hover {
+    text-decoration: underline;
+  }
+</style>

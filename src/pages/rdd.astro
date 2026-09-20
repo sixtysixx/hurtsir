@@ -1,0 +1,194 @@
+---
+// Standalone Roblox Deployment Downloader page.
+// Uses the self-contained stylesheet/scripts in /public/rdd and is intentionally
+// outside Starlight's docs layout so rdd.js owns the whole DOM.
+const title = 'RDD -SirHurt Roblox Deployment Downloader';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Download Windows/Mac Roblox deployments directly from Roblox's CDN. Part of the SirHurt troubleshooting guide."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title}</title>
+    <link rel="stylesheet" href="/rdd/css/styles.css" />
+  </head>
+  <body>
+    <div class="stack">
+      <header class="hdr">
+        <p>
+          <a class="brand" href="/"><strong>SirHurt</strong> RDD</a>
+          &mdash; Roblox Deployment Downloader
+        </p>
+        <p class="notice">
+          <span class="no-select">Downloads happen entirely in your browser.</span>
+          Needs a modern browser &mdash; large builds can take a while.
+          <a href="/guide/downgrade/">Back to the guide</a>
+        </p>
+      </header>
+
+      <div id="formDiv" hidden>
+        <form id="form">
+          <div class="fgrid">
+            <label for="binaryType">Binary Type</label>
+            <select id="binaryType" name="binaryType">
+              <option value="WindowsPlayer">WindowsPlayer</option>
+              <option value="WindowsStudio64">WindowsStudio64</option>
+              <option value="MacPlayer">MacPlayer</option>
+              <option value="MacStudio">MacStudio</option>
+            </select>
+
+            <label for="channel" data-tooltip="Defaults to LIVE when empty">Channel</label>
+            <input type="text" id="channel" name="channel" value="LIVE" placeholder="LIVE" autocomplete="off" />
+
+            <label for="version" data-tooltip="Leave empty to fetch the latest">Version Hash</label>
+            <input
+              type="text"
+              id="version"
+              name="version"
+              placeholder="Leave empty for latest"
+              autocomplete="off"
+              spellcheck="false"
+            />
+
+            <div class="sep"></div>
+
+            <label for="compressZip">Compress ZIP</label>
+            <input type="checkbox" id="compressZip" name="compressZip" />
+
+            <label for="compressionLevel" id="compLabel" style="display: none;">Compression Level</label>
+            <div class="frow" id="compRow" style="display: none;">
+              <input type="range" id="compressionLevel" name="compressionLevel" min="1" max="9" value="1" />
+              <span class="hint" id="compVal">1</span>
+            </div>
+
+            <label for="parallelDownloads" data-tooltip="Faster, but uses more bandwidth">Parallel Downloads</label>
+            <input type="checkbox" id="parallelDownloads" name="parallelDownloads" checked />
+          </div>
+
+          <div class="fbtns">
+            <button type="button" id="btnLatest">Download Latest Version</button>
+            <button type="button" id="btnPrev">Download Previous Version</button>
+            <button type="button" id="btnSpecified">Download Specified Hash</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="usageDiv" hidden>
+        <div class="usage">
+          <p class="u-title">USAGE</p>
+          <p><code>/rdd/?channel=&lt;CHANNEL&gt;&amp;binaryType=&lt;TYPE&gt;&amp;version=&lt;VERSION_HASH&gt;</code></p>
+          <ul>
+            <li>
+              <strong>Binary Types:</strong> <code>WindowsPlayer</code>, <code>WindowsStudio64</code>,
+              <code>MacPlayer</code>, <code>MacStudio</code>
+            </li>
+            <li><strong>Channel:</strong> Defaults to <code>LIVE</code> if omitted</li>
+            <li>
+              <strong>Version:</strong> Provide both <code>binaryType</code> and <code>version</code> to fetch a
+              specific deployment
+            </li>
+          </ul>
+          <p class="u-note">
+            <strong>Latest version</strong> is resolved from Roblox's official deployment API, so it works with no
+            backend. (The CDN's <code>/version</code> file can name a newer build that is staged and not yet
+            downloadable.)
+            <br />
+            <strong>Previous Version</strong> comes from the version-tracker API, which also powers the
+            <code>?exploit=</code> lookup.
+            <br />
+            Optional: override the tracker backend with <code>?api=https://your-backend</code> (or
+            <code>window.RDD_API_BASE</code>), and route blobs through your own mirror with
+            <code>?mirror=https://your-proxy</code> (or <code>window.RDD_MIRROR</code>).
+          </p>
+        </div>
+      </div>
+
+      <div id="logBox"></div>
+
+      <div id="progWrap" hidden>
+        <div class="phdr">
+          <span id="progMsg">Starting...</span>
+          <div class="pright">
+            <span id="progPct">0%</span>
+            <span id="progEta"></span>
+          </div>
+        </div>
+        <div class="ptrack"><div id="progFill"></div></div>
+      </div>
+
+      <div class="page-credit">
+        <p class="page-credit-text">
+          Made by <a href="https://discord.com/users/1045933816260350032" target="_blank" rel="noopener">SIX</a>
+          - Report Issues to them.
+        </p>
+      </div>
+    </div>
+
+    <script is:inline>
+      // Small UI niceties for the form (compression slider + button wiring).
+      (function () {
+        const form = document.getElementById('form');
+        if (form) {
+          const zip = form.elements.compressZip;
+          const row = document.getElementById('compRow');
+          const label = document.getElementById('compLabel');
+          const range = form.elements.compressionLevel;
+          const val = document.getElementById('compVal');
+          const sync = () => {
+            // Hide the label with its slider -otherwise the label is left
+            // behind in the grid as an empty, misaligned row.
+            const on = zip.checked;
+            if (row) row.style.display = on ? 'flex' : 'none';
+            if (label) label.style.display = on ? '' : 'none';
+          };
+          zip.addEventListener('change', sync);
+          range.addEventListener('input', () => {
+            if (val) val.textContent = range.value;
+          });
+          sync();
+
+          document.getElementById('btnLatest').addEventListener('click', () => window.dlLatest && window.dlLatest());
+          document.getElementById('btnPrev').addEventListener('click', () => window.dlPrev && window.dlPrev());
+          document.getElementById('btnSpecified').addEventListener('click', () => window.dlHash && window.dlHash());
+        }
+      })();
+    </script>
+
+    <!-- Order matters: JSZip must be defined before rdd.js runs `new JSZip()`. -->
+    <script is:inline src="/rdd/js/jszip.min.js"></script>
+    <script is:inline src="/rdd/js/rdd.js"></script>
+
+    <style>
+      .page-credit {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
+        margin-top: 2.5rem;
+        text-align: right;
+        font-size: 0.8rem;
+        color: var(--silver-dark);
+      }
+
+      .page-credit-text {
+        margin: 0;
+      }
+
+      .page-credit-text a {
+        color: var(--amethyst);
+        text-decoration: none;
+      }
+
+      .page-credit-text a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </body>
+</html>

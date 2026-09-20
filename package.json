@@ -2,11 +2,17 @@
   "name": "hurtsir",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "build": "npx @11ty/eleventy",
-    "dev": "npx @11ty/eleventy --serve"
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
   },
-  "devDependencies": {
-    "@11ty/eleventy": "^3.1.6"
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.2",
+    "astro": "^7.3.3",
+    "sharp": "^0.35.3"
   }
 }

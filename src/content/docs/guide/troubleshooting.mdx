@@ -1,0 +1,204 @@
+---
+title: Troubleshooting
+description: Step-by-step fixes for the common SirHurt problems - injection failures, version errors, antivirus blocks and hung bootstrappers.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+Almost every SirHurt problem traces back to one of five causes: an unsupported Roblox
+version, a Roblox setting the bootstrapper can't work around, antivirus interference,
+missing prerequisites, or leftovers from an earlier install. Find the symptom you're
+seeing and work the steps in order.
+
+<Aside type="tip" title="Run these five checks first">
+1. You're on Windows **24H2** or newer.
+2. Roblox **"Launch on startup"** and **"Minimize to tray when closed"** are both disabled - see [Roblox Settings](/guide/roblox-settings/).
+3. Your SirHurt folder is in your antivirus **exclusions** - see [Preparation](/guide/preparation/).
+4. The Bootstrapper is being started **as Administrator**.
+5. You wait **5-10 seconds** after joining a game before injecting.
+
+If all five are true and it still fails, jump to the matching symptom below.
+</Aside>
+
+## "Unsupported version" / version check fails
+
+SirHurt only works on Roblox builds it has been updated for. Right after a Roblox
+update, the build you're on is usually too new.
+
+<Steps>
+
+1. **If Roblox updated recently, just run the bootstrapper again.** SirHurt is usually
+   patched for a new Roblox build shortly after it ships, so a fresh run often picks up
+   support for the build you're already on.
+
+2. If that fixed it, you're done. If it didn't, continue with the rest of the guide.
+
+3. Check the announcements channel in our [Discord](https://discord.gg/sirhurt) for
+   the currently supported version.
+
+4. Note the recommended build hash (it looks like `version-c5aecda2245e4fae`).
+
+5. Download that build. Either follow the [Downgrade Tutorial](/guide/downgrade/), or
+   open the [Downgrade Thingamabob 6000](/rdd/) and click **Download Previous Version**, which
+   tracks the current downgrade target for you.
+
+6. Fully close Roblox - including from the system tray - before replacing anything.
+
+7. Extract the downloaded build and launch it, then join a game and wait 5-10 seconds
+   before injecting.
+
+8. If it still reports an unsupported version, the build was updated again in the
+   meantime. Repeat from step 3.
+
+</Steps>
+
+## Injection doesn't work after clicking Inject
+
+<Steps>
+
+1. Confirm you're on Windows **24H2** or newer. Older builds are not supported.
+
+2. Re-check the Roblox settings. With **"Minimize to tray when closed"** enabled,
+   Roblox keeps a hidden process that the bootstrapper can't attach to cleanly.
+
+3. Close Roblox completely, including the tray icon, then reopen it.
+
+4. Join any game and wait **5-10 seconds** so the client is fully loaded.
+
+5. Run the SirHurt Bootstrapper **as Administrator**.
+
+6. Click **Inject** and log in when prompted.
+
+7. **Do not click Inject again after logging in.** The bootstrapper finishes the
+   process on its own - a second click can cause failed injections.
+
+8. Execute a test script such as **Infinite Yield** to confirm the injector is live.
+
+</Steps>
+
+## The bootstrapper hangs, won't open, or closes instantly
+
+<Steps>
+
+1. Open the SirHurt UI and use the **Kill Processes** button to clear stuck Roblox
+   and bootstrapper processes.
+
+2. If the UI is unresponsive, end `RobloxPlayerBeta` and the bootstrapper from Task
+   Manager (Ctrl + Shift + Esc) instead.
+
+3. Start the Bootstrapper as **Administrator** again.
+
+4. Add a **folder exclusion** for your SirHurt folder in your antivirus settings. An
+   instant close is usually the scanner deleting a file while the bootstrapper is still
+   loading it -see
+   [Antivirus flags, quarantines, or deletes SirHurt files](#antivirus-flags-quarantines-or-deletes-sirhurt-files).
+
+5. Re-download SirHurt from [sirhurt.net](https://sirhurt.net) rather than reusing an
+   older copy, so you're not starting from a partial install.
+
+6. Extract the download with **7-Zip** or **WinRAR**. Windows' built-in extractor can
+   leave the DLLs marked as blocked, which stops the bootstrapper from starting.
+
+7. Re-run the [SirHurt Cleaner](https://github.com/i-nagap/Sirstrap/releases/)
+   (bundled with Sirstrap) and press `Y` + `Enter` for every prompt. This wipes
+   leftover files from older installs.
+
+8. Reinstall **both x86 and x64** of the
+   [Visual C++ Redistributables](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version)
+   and the [.NET SDK](https://dotnet.microsoft.com/en-us/download), then **restart
+   your PC**.
+
+</Steps>
+
+<Aside type="caution">
+Running the Cleaner will clear your SirHurt auth data, so you'll need to log in
+again afterwards.
+</Aside>
+
+## Antivirus flags, quarantines, or deletes SirHurt files
+
+Injectors are routinely flagged by heuristic scanners, so this is expected noise
+rather than proof of anything malicious - but it will break your install every time
+the scanner acts.
+
+<Steps>
+
+1. Open your antivirus **quarantine/history** and restore anything related to
+   SirHurt if it was removed.
+
+2. Create a dedicated folder for SirHurt (for example `C:\Users\USERNAME\Downloads\SuperAwesomeSauceExecutor`) and add it to
+   your antivirus **Exclusions / Whitelist**.
+
+3. Add the Roblox install directory to exclusions as well, since the bootstrapper
+   writes there.
+
+4. Re-download any missing files from official sources only -never from mirrors or
+   random reuploads.
+
+5. Re-run the bootstrapper as Administrator to confirm it now launches and stays
+   open.
+
+</Steps>
+
+## Scripts don't execute after a successful injection
+
+<Steps>
+
+1. Confirm the injection actually succeeded -the bootstrapper UI should report a
+   successful attach rather than sitting at "waiting".
+
+2. Make sure Roblox is within a game, not at the home screen.
+
+3. Execute a known/good, maintained script such as **Infinite Yield** first, so you
+   know the injector works and any failure is the script's fault.
+
+4. Check the announcements channel in our [Discord](https://discord.gg/sirhurt) for
+   known script outages before assuming your setup is at fault.
+
+</Steps>
+
+## Downloads from the Downgrade Thingamabob 6000 fail
+
+<Steps>
+
+1. Read the log panel. The downloader reports the exact HTTP status for each
+   failure, which tells you whether the problem is your network or Roblox's CDN.
+
+2. If **Download Latest Version** fails, retry with **Download Previous Version**.
+   Roblox sometimes publishes a build before all of its files are downloadable, and
+   the previous build is usually the one SirHurt wants anyway.
+
+3. If you're targeting a specific executor, put its name in the **Version Hash**
+   field's companion query using `?exploit=<name>` - RDD resolves the build that
+   executor is pinned to.
+
+4. On repeated network errors, try **Cloudflare WARP** - the log panel links it
+   directly under the error.
+
+5. Make sure you have enough free disk space: the assembled archive is several
+   hundred MB, and it's built in memory in your browser.
+
+</Steps>
+
+## Roblox won't launch, or opens a black/blank window
+
+<Steps>
+
+1. Kill every Roblox process, including the tray process, then relaunch.
+
+2. Check the Roblox settings again - **"Launch on startup"** in particular can leave
+   a stale session fighting your new one.
+
+3. Repair your system files by running the chain from
+   [Preparation](/guide/preparation/) in an **Administrator PowerShell**, then
+   restart.
+
+4. If Roblox still won't start, reinstall it, then repeat the setup steps from
+   [Preparation](/guide/preparation/) before injecting again.
+
+</Steps>
+
+## Still stuck
+
+Follow [itdidnt.work](https://itdidnt.work/) and head to **#support** in our
+[Discord](https://discord.gg/sirhurt) with details - someone will assist you there.
