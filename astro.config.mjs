@@ -9,7 +9,7 @@ export default defineConfig({
   devToolbar: { enabled: false },
   integrations: [
     starlight({
-      title: 'SirHurt Troubleshooting Guide',
+      title: ':3',
       description: 'A comprehensive, step-by-step guide for setting up and troubleshooting SirHurt on Roblox.',
       favicon: '/favicon.svg',
       customCss: ['./src/styles/custom.css'],
