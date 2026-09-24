@@ -24,3 +24,4 @@ Thumbs.db
 # project-specific
 troubleshoot_log.txt
 *.log
+bun.lock
