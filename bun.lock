@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "hurtsir",
+      "name": "sirhurt",
       "dependencies": {
         "@astrojs/starlight": "^0.42.2",
         "astro": "^7.3.3",
