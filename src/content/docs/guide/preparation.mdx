@@ -3,22 +3,22 @@ title: Preparation & Prerequisites
 description: Get Windows ready for SirHurt -a dedicated folder, antivirus exclusions, system file repair, and the runtimes the bootstrapper needs.
 ---
 
-import { Steps, Aside } from '@astrojs/starlight/components';
+import { Steps, Aside } from "@astrojs/starlight/components";
 
 SirHurt leans on runtime libraries that a fresh Windows install often doesn't ship, and its
-files look like a hack tool to every antivirus heuristic scanner. Sort both out *before* the
+files look like a hack tool to every antivirus heuristic scanner. Sort both out _before_ the
 first launch and you avoid most of the failures people blame on the injector.
 
 Problems you skip here tend to surface later as "the bootstrapper closes instantly" or "a DLL
 is missing" -both are covered on the [Troubleshooting](/guide/troubleshooting/) page.
 
 <Aside type="tip" title="Before you start">
-- You need **administrator access** on the machine.
-- Allow roughly **2 GB** of free disk space.
-- Confirm you're on Windows **24H2 or newer** -run `winver` from the Start menu.
+  - You need **administrator access** on the machine. - Allow roughly **2 GB**
+  of free disk space. - Confirm you're on Windows **24H2 or newer** -run
+  `winver` from the Start menu.
 </Aside>
 
-## Step 1 -Give SirHurt its own folder
+## Step 1 - Give SirHurt its own folder
 
 Every later step (exclusions, cleaning, reinstalling) gets simpler if SirHurt lives somewhere
 obvious and predictable.
@@ -38,7 +38,7 @@ obvious and predictable.
 
 </Steps>
 
-## Step 2 -Add antivirus exclusions
+## Step 2 - Add antivirus exclusions
 
 This is the single most important step. If your antivirus quarantines SirHurt's files, nothing
 downstream will work, and the failure will look random rather than like an antivirus problem.
@@ -65,12 +65,13 @@ downstream will work, and the failure will look random rather than like an antiv
 </Steps>
 
 <Aside type="danger" title="Exclude folders, not whole drives">
-Only ever exclude the specific folders above, and don't leave real-time protection permanently
-disabled. Excluding an entire drive -or turning protection off for good -is a genuine security
-risk and not something you need in order to run SirHurt.
+  Only ever exclude the specific folders above, and don't leave real-time
+  protection permanently disabled. Excluding an entire drive -or turning
+  protection off for good -is a genuine security risk and not something you need
+  in order to run SirHurt.
 </Aside>
 
-## Step 3 -Repair system files
+## Step 3 - Repair system files
 
 Corrupt or mismatched Windows component files are a common cause of silent bootstrapper
 crashes. This chain checks the component store and repairs it from a known-good source.
@@ -98,7 +99,7 @@ crashes. This chain checks the component store and repairs it from a known-good 
 
 </Steps>
 
-## Step 4 -Install the required runtimes
+## Step 4 - Install the required runtimes
 
 SirHurt will not start without these. Install **both architectures** of the Visual C++
 redistributables -a 64-bit Windows install is not a substitute for the x86 package.
@@ -109,7 +110,7 @@ redistributables -a 64-bit Windows install is not a substitute for the x86 packa
 
 2. Download and install the **x64** Visual C++ Redistributable from the same page.
 
-3. Download and install the [.NET SDK - Both x86 and x64](https://dotnet.microsoft.com/en-us/download) . 
+3. Download and install the [.NET SDK - Both x86 and x64](https://dotnet.microsoft.com/en-us/download) .
 
 4. Use the installers' defaults. There's no need to customise components.
 
@@ -119,10 +120,11 @@ redistributables -a 64-bit Windows install is not a substitute for the x86 packa
 </Steps>
 
 <Aside type="caution" title="Both architectures, then reboot">
-Installing x64 and not x86 is the most common mistake at this step. Install both, then actually reboot rather than just logging out.
+  Installing x64 and not x86 is the most common mistake at this step. Install
+  both, then actually reboot rather than just logging out.
 </Aside>
 
-## Step 5 -Verify you're ready
+## Step 5 - Verify you're ready
 
 Run through this list before moving on. Each item maps to a failure you would otherwise have to
 debug later.

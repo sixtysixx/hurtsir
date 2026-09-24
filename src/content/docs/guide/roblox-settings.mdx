@@ -3,7 +3,7 @@ title: Roblox Settings
 description: Configure Roblox and clear stale installs so the SirHurt bootstrapper can attach cleanly.
 ---
 
-import { Steps, Aside } from '@astrojs/starlight/components';
+import { Steps, Aside } from "@astrojs/starlight/components";
 
 The bootstrapper has to find the running Roblox client and attach to it. Two Roblox settings
 routinely get in the way, and leftover files from previous installs cause the rest of the
@@ -13,14 +13,14 @@ Do this page after [Preparation & Prerequisites](/guide/preparation/) and before
 attempt at [Execution & Injection](/guide/injection/).
 
 <Aside type="tip" title="Why these two settings matter">
-- **Launch on startup** lets Roblox open itself at login, so you end up with a client running
-  before the bootstrapper is ready for it.
-- **Minimize to tray when closed** keeps a hidden Roblox process alive after you close the
-  window. The bootstrapper can't tell that client apart from a stale one, which is what causes
-  injection to silently do nothing.
+  - **Launch on startup** lets Roblox open itself at login, so you end up with a
+  client running before the bootstrapper is ready for it. - **Minimize to tray
+  when closed** keeps a hidden Roblox process alive after you close the window.
+  The bootstrapper can't tell that client apart from a stale one, which is what
+  causes injection to silently do nothing.
 </Aside>
 
-## Step 1 -Disable Launch on startup
+## Step 1 - Disable Launch on startup
 
 <Steps>
 
@@ -35,7 +35,7 @@ attempt at [Execution & Injection](/guide/injection/).
 
 </Steps>
 
-## Step 2 -Disable Minimize to tray when closed
+## Step 2 - Disable Minimize to tray when closed
 
 <Steps>
 
@@ -47,7 +47,7 @@ attempt at [Execution & Injection](/guide/injection/).
 
 </Steps>
 
-## Step 3 -Fully close Roblox
+## Step 3 - Fully close Roblox
 
 Both settings above only take effect on a fresh start, so clearing out any existing client is
 part of the job.
@@ -71,12 +71,13 @@ part of the job.
 </Steps>
 
 <Aside type="caution">
-If a Roblox process keeps reappearing after you end it, you're almost certainly still hitting
-the tray setting from step 2, or Roblox is being relaunched by a scheduled task from "Launch on
-startup". Re-check both before moving on.
+  If a Roblox process keeps reappearing after you end it, you're almost
+  certainly still hitting the tray setting from step 2, or Roblox is being
+  relaunched by a scheduled task from "Launch on startup". Re-check both before
+  moving on.
 </Aside>
 
-## Step 4 -Clear a stale install (only if needed)
+## Step 4 - Clear a stale install (only if needed)
 
 If you've had SirHurt installed before, or injection has stopped working after previously
 working, old files are the likely cause. The SirHurt Cleaner wipes them.
@@ -96,11 +97,12 @@ working, old files are the likely cause. The SirHurt Cleaner wipes them.
 </Steps>
 
 <Aside type="danger" title="This clears your auth data">
-The cleaner removes SirHurt's stored authentication along with the old files, so you'll need to
-log in again on your next injection. That's expected, not a sign that something broke.
+  The cleaner removes SirHurt's stored authentication along with the old files,
+  so you'll need to log in again on your next injection. That's expected, not a
+  sign that something broke.
 </Aside>
 
-## Step 5 -Handle version errors
+## Step 5 - Handle version errors
 
 If SirHurt reports that you're on an unsupported version, Roblox has been updated past the build
 SirHurt has been patched for. This is normal immediately after a Roblox release.
@@ -120,7 +122,7 @@ SirHurt has been patched for. This is normal immediately after a Roblox release.
 
 </Steps>
 
-## Step 6 -Verify before continuing
+## Step 6 - Verify before continuing
 
 <Steps>
 

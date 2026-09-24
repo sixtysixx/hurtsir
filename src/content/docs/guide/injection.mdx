@@ -3,7 +3,7 @@ title: Execution & Injection
 description: Launch Roblox, run the bootstrapper as Administrator, and inject SirHurt without the classic mistakes.
 ---
 
-import { Steps, Aside } from '@astrojs/starlight/components';
+import { Steps, Aside } from "@astrojs/starlight/components";
 
 Injection is the step where order and timing matter most. Roblox has to be up and fully loaded
 before the bootstrapper can attach, and the bootstrapper has to run with elevation or it won't
@@ -13,7 +13,7 @@ Work through [Preparation & Prerequisites](/guide/preparation/) and
 [Roblox Settings](/guide/roblox-settings/) first -most "injection failed" reports trace back to
 something on one of those two pages.
 
-## Step 1 -Launch Roblox and join a game
+## Step 1 - Launch Roblox and join a game
 
 <Steps>
 
@@ -30,11 +30,11 @@ something on one of those two pages.
 </Steps>
 
 <Aside type="tip">
-Picking a small, private or empty game makes this much easier -there's less going on during
-startup, so "the game has finished loading" is unambiguous.
+  Picking a small, private or empty game makes this much easier -there's less
+  going on during startup, so "the game has finished loading" is unambiguous.
 </Aside>
 
-## Step 2 -Wait before injecting
+## Step 2 - Wait before injecting
 
 <Steps>
 
@@ -47,7 +47,7 @@ startup, so "the game has finished loading" is unambiguous.
 
 </Steps>
 
-## Step 3 -Run the bootstrapper as Administrator
+## Step 3 - Run the bootstrapper as Administrator
 
 <Steps>
 
@@ -64,7 +64,7 @@ startup, so "the game has finished loading" is unambiguous.
 
 </Steps>
 
-## Step 4 -Confirm the bootstrapper sees Roblox
+## Step 4 - Confirm the bootstrapper sees Roblox
 
 <Steps>
 
@@ -79,7 +79,7 @@ startup, so "the game has finished loading" is unambiguous.
 
 </Steps>
 
-## Step 5 -Inject
+## Step 5 - Inject
 
 <Steps>
 
@@ -92,14 +92,15 @@ startup, so "the game has finished loading" is unambiguous.
 </Steps>
 
 <Aside type="danger" title="Do NOT click Inject a second time">
-Once you've logged in, the bootstrapper finishes the injection on its own. Clicking **Inject**
-again afterwards is one of the most common causes of a failed or half-finished injection, and it
-can leave you needing to restart Roblox before it works again.
+  Once you've logged in, the bootstrapper finishes the injection on its own.
+  Clicking **Inject** again afterwards is one of the most common causes of a
+  failed or half-finished injection, and it can leave you needing to restart
+  Roblox before it works again.
 </Aside>
 
-## Step 6 -Confirm it actually works
+## Step 6 - Confirm it actually works
 
-Don't judge the injection by whether the UI looks right -prove it with a script.
+Don't judge the injection by whether the UI looks right.
 
 <Steps>
 
@@ -135,7 +136,8 @@ Don't judge the injection by whether the UI looks right -prove it with a script.
 </Steps>
 
 <Aside type="tip" title="Still stuck?">
-Collect your Windows version (`winver`), the Roblox build hash and the full bootstrapper log,
-then post them in our [Discord](https://discord.gg/sirhurt). Those three details turn "it
-doesn't work" into something that can actually be diagnosed.
+  Collect your Windows version (`winver`), the Roblox build hash and the full
+  bootstrapper log, then post them in our [Discord](https://discord.gg/sirhurt).
+  Those three details turn "it doesn't work" into something that can actually be
+  diagnosed.
 </Aside>
