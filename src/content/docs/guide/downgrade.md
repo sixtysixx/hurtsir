@@ -4,7 +4,7 @@ description: Download a specific Roblox version for compatibility with SirHurt.
 ---
 
 :::Caution
-**Recommended Version (as of 09/19/2026):** [version-c5aecda2245e4fae](https://sirhurt.net/downgradetutorial.php?version=version-c5aecda2245e4fae)
+**Recommended Version (as of 09/24/2026):** [version-2366ba214ec740ca (latest, no need to downgrade unless youre on beta)](https://sirhurt.net/downgradetutorial.php?version=version-2366ba214ec740ca)
 :::
 
 Need a specific build? Head to the [Downgrade Thingamabob 6000](/rdd/) to pull any Roblox deployment directly from Roblox's CDN.
