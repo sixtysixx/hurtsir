@@ -96,3 +96,53 @@ def test_pruning_keeps_recent_key_map_bounded() -> None:
         limiter.record(1, index, "antivirus")
         clock.advance(0.1)
     assert len(limiter._recent_keys) <= 512
+
+
+# --- release (a retracted reply must not keep the channel locked out) --------------
+
+
+def test_release_frees_user_channel_and_key() -> None:
+    limiter, _ = _limiter()
+    limiter.record(1, 10, "antivirus")
+    assert limiter.check(1, 10, "antivirus") == "cooldown_user"
+
+    limiter.release(1, 10, "antivirus")
+
+    assert limiter.check(1, 10, "antivirus") is None
+
+
+def test_release_keeps_the_global_budget() -> None:
+    clock = FakeClock()
+    limiter = RateLimiter(max_per_minute=2, now=clock)
+    limiter.record(1, 10, "antivirus")
+    limiter.record(2, 11, "prerequisites")
+
+    limiter.release(1, 10, "antivirus")
+    assert limiter.check(3, 12, "fresh") == "cooldown_global"
+
+
+def test_release_only_frees_the_named_entries() -> None:
+    limiter, _ = _limiter()
+    limiter.record(1, 10, "antivirus")
+    limiter.record(2, 11, "prerequisites")
+
+    limiter.release(1, 10, "antivirus")
+
+    assert limiter.check(2, 11, "prerequisites") == "cooldown_user"
+    assert limiter.check(2, 11, "prerequisites") == "cooldown_user"
+    assert limiter.check(9, 11, "prerequisites") == "cooldown_channel"
+    assert limiter.check(9, 12, "prerequisites") is None
+
+
+def test_release_of_unknown_entries_is_a_noop() -> None:
+    limiter, _ = _limiter()
+    limiter.release(404, 404, "never-recorded")
+    assert limiter.check(1, 10, "antivirus") is None
+
+
+def test_release_is_idempotent() -> None:
+    limiter, _ = _limiter()
+    limiter.record(1, 10, "antivirus")
+    limiter.release(1, 10, "antivirus")
+    limiter.release(1, 10, "antivirus")
+    assert limiter.check(1, 10, "antivirus") is None

@@ -415,6 +415,92 @@ def test_only_the_veto_emoji_retracts() -> None:
     assert answer.deleted is False
 
 
+# --- retraction must not lock the channel out -------------------------------------
+
+
+def test_retry_right_after_a_veto_is_answered() -> None:
+    """Reported bug: after a veto the asker got no further replies. The deleted reply must not
+    keep its cooldown slots, or retracting a wrong answer would prevent the corrected one."""
+    ctx = _context()
+    first = Message(id=1, content="inject failed", channel=Channel(10), author=Author(id=42))
+    assert _run(first, ctx) == "replied"
+    assert _react(Payload(user_id=42, message_id=first.replies[0].id), ctx) == "vetoed"
+
+    retry = Message(id=2, content="inject failed", channel=Channel(10), author=Author(id=42))
+    assert _run(retry, ctx) == "replied"
+    assert len(retry.replies) == 1
+
+
+def test_veto_frees_the_question_for_other_users() -> None:
+    ctx = _context()
+    first = Message(id=1, content="inject failed", channel=Channel(10), author=Author(id=42))
+    assert _run(first, ctx) == "replied"
+    assert _react(Payload(user_id=42, message_id=first.replies[0].id), ctx) == "vetoed"
+
+    other = Message(id=2, content="inject failed", channel=Channel(10), author=Author(id=43))
+    assert _run(other, ctx) == "replied"
+
+
+def test_csr_veto_frees_the_channel_for_the_asker() -> None:
+    ctx = _context(csr_role_ids=frozenset({500}))
+    first = Message(id=1, content="inject failed", channel=Channel(10), author=Author(id=42))
+    assert _run(first, ctx) == "replied"
+    staff = Payload(
+        user_id=7, message_id=first.replies[0].id, member=Member(roles=[Role(500)])
+    )
+    assert _react(staff, ctx) == "vetoed"
+
+    retry = Message(id=2, content="where is my key", channel=Channel(10), author=Author(id=42))
+    assert _run(retry, ctx) == "replied"
+
+
+def test_veto_does_not_refund_the_global_budget() -> None:
+    """Ask/veto cycles must still be capped by the per-minute volume limit."""
+    ctx = _context(max_replies_per_minute=3)
+    results = []
+    for index in range(4):
+        message = Message(
+            id=100 + index,
+            content="inject failed",
+            channel=Channel(50 + index),
+            author=Author(id=200 + index),
+        )
+        outcome = _run(message, ctx)
+        results.append(outcome)
+        if outcome == "replied":
+            payload = Payload(user_id=200 + index, message_id=message.replies[0].id)
+            assert _react(payload, ctx) == "vetoed"
+    assert results == ["replied", "replied", "replied", "cooldown_global"]
+
+
+def test_veto_only_clears_the_retracted_reply() -> None:
+    ctx = _context()
+    first = Message(id=1, content="inject failed", channel=Channel(10), author=Author(id=42))
+    second = Message(id=2, content="where is my key", channel=Channel(11), author=Author(id=43))
+    assert _run(first, ctx) == "replied"
+    assert _run(second, ctx) == "replied"
+
+    assert _react(Payload(user_id=42, message_id=first.replies[0].id), ctx) == "vetoed"
+
+    # the untouched reply's channel is still protected
+    later = Message(id=3, content="am i banned", channel=Channel(11), author=Author(id=44))
+    assert _run(later, ctx) == "cooldown_channel"
+
+
+def test_veto_releases_even_when_the_message_was_already_gone() -> None:
+    ctx = _context()
+    message = Message(id=1, content="inject failed", channel=Channel(10), author=Author(id=42))
+    assert _run(message, ctx) == "replied"
+    answer = message.replies[0]
+    answer.delete_error = discord.NotFound(
+        SimpleNamespace(status=404, reason="Not Found"), "Unknown Message"
+    )
+    assert _react(Payload(user_id=42, message_id=answer.id), ctx) == "vetoed_gone"
+
+    retry = Message(id=2, content="inject failed", channel=Channel(10), author=Author(id=42))
+    assert _run(retry, ctx) == "replied"
+
+
 def test_author_can_retract_their_answer() -> None:
     ctx = _context()
     message = Message(id=1, content="inject failed", channel=Channel(10), author=Author(id=42))

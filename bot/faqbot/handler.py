@@ -25,6 +25,8 @@ NO_MENTIONS = discord.AllowedMentions.none()
 @dataclass(frozen=True, slots=True)
 class SentReply:
     author_id: int
+    channel_id: int
+    key: str
     message: object
 
 
@@ -93,11 +95,10 @@ async def handle_message(message, ctx: BotContext, self_id: int) -> str:
         return decision
 
     answer = await message.reply(compose_reply(decision.text), allowed_mentions=NO_MENTIONS)
-    _remember(ctx, answer, message.author.id)
+    _remember(ctx, answer, message.author.id, message.channel.id, decision.key)
     try:
         await answer.add_reaction(VETO_EMOJI)
     except Exception:
-        # the answer is already out; a missing veto button must not be treated as a failure
         log.warning("could not add veto reaction to %s", getattr(answer, "id", "?"), exc_info=True)
     ctx.limiter.record(message.author.id, message.channel.id, decision.key)
     ctx.seen.append(message.id)
@@ -112,10 +113,14 @@ async def handle_message(message, ctx: BotContext, self_id: int) -> str:
     return "replied"
 
 
-def _remember(ctx: BotContext, answer, author_id: int) -> None:
+def _remember(
+    ctx: BotContext, answer, author_id: int, channel_id: int, key: str
+) -> None:
     if answer.id is None:
         return
-    ctx.sent[answer.id] = SentReply(author_id=author_id, message=answer)
+    ctx.sent[answer.id] = SentReply(
+        author_id=author_id, channel_id=channel_id, key=key, message=answer
+    )
     while len(ctx.sent) > SENT_LIMIT:
         ctx.sent.pop(next(iter(ctx.sent)))
 
@@ -149,10 +154,13 @@ async def handle_reaction(payload, ctx: BotContext, self_id: int) -> str:
         return reason
 
     record = ctx.sent.pop(payload.message_id)
+    # the reply is gone, so free the slots it held: the asker must be able to retry, and the
+    # same question must be answerable again in that channel
+    ctx.limiter.release(record.author_id, record.channel_id, record.key)
     try:
         await record.message.delete()
     except discord.NotFound:
         log.info("veto target %s was already gone", payload.message_id)
         return "vetoed_gone"
-    log.info("vetoed reply %s in %s", payload.message_id, payload.channel_id)
+    log.info("vetoed %s reply %s in %s", record.key, payload.message_id, record.channel_id)
     return "vetoed"

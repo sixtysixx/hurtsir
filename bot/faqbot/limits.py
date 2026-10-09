@@ -66,6 +66,18 @@ class RateLimiter:
         if len(self._recent_keys) > _PRUNE_THRESHOLD:
             self._prune_map(self._recent_keys, now, self.duplicate_window_s)
 
+    def release(self, user_id: int, channel_id: int, key: str) -> None:
+        """Undo a recorded send whose reply was retracted.
+
+        A vetoed reply no longer exists, so it must not keep the asker, the channel or that
+        question locked out - otherwise retracting a wrong answer would prevent the corrected
+        one from ever being sent. The per-minute volume counter is deliberately kept, so
+        ask/veto cycles cannot exceed the normal reply budget.
+        """
+        self._last_by_user.pop(user_id, None)
+        self._last_by_channel.pop(channel_id, None)
+        self._recent_keys.pop((channel_id, key), None)
+
     def _prune_sends(self, now: float) -> None:
         sends = self._recent_sends
         while sends and now - sends[0] >= self.window_s:
