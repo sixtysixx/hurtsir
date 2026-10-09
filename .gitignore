@@ -25,3 +25,8 @@ Thumbs.db
 troubleshoot_log.txt
 *.log
 bun.lock
+
+# python (bot/)
+__pycache__/
+.venv/
+.pytest_cache/
