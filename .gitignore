@@ -26,6 +26,12 @@ troubleshoot_log.txt
 *.log
 bun.lock
 
+# scraped cat gifs
+cats/
+
+# downloaded source videos (scripts/fetch_gifs.py)
+.cache/
+
 # python (bot/)
 __pycache__/
 .venv/

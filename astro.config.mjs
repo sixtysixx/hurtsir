@@ -64,6 +64,7 @@ export default defineConfig({
           ],
         },
         { label: "Downgrade Thingamabob 6000", link: "/rdd/" },
+        { label: "Cattos", link: "/cattos/" },
       ],
     }),
   ],

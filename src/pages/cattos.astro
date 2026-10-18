@@ -1,0 +1,160 @@
+---
+// Cat gallery. Standalone page (like /rdd) so the grid owns the whole viewport.
+// Files live in /public/cattos and are listed at build time, so re-running
+// scripts/scrape_cats.py is enough to add new entries - no edits needed here.
+import { existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+
+// Resolved from the project root: `import.meta.url` points at Vite's bundled
+// copy of this module, not at src/pages, so it cannot find public/.
+const dir = join(process.cwd(), 'public', 'cattos');
+const files = existsSync(dir)
+  ? readdirSync(dir)
+      .filter((name) => name.endsWith('.gif'))
+      .sort((a, b) => Number(a.match(/\d+/)?.[0] ?? 0) - Number(b.match(/\d+/)?.[0] ?? 0))
+  : [];
+
+const title = 'Cattos -SirHurt';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A pile of cat GIFs. Part of the SirHurt guide." />
+    <meta name="robots" content="index, follow" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header class="hdr">
+      <p><a class="brand" href="/"><strong>SirHurt</strong></a> &mdash; Cattos</p>
+      <p class="notice">
+        {files.length} cat{files.length === 1 ? '' : 's'} &mdash;
+        <a href="/guide/quick-start/">Back to the guide</a>
+      </p>
+    </header>
+
+    {
+      files.length === 0 ? (
+        <p class="empty">
+          No cat GIFs found in <code>public/cattos/</code>. Run
+          <code>python scripts/scrape_cats.py --out public/cattos</code> first.
+        </p>
+      ) : (
+        <ul class="grid">
+          {files.map((name) => (
+            <li>
+              <a href={`/cattos/${name}`} target="_blank" rel="noopener">
+                <img src={`/cattos/${name}`} alt={`Cat GIF ${name}`} loading="lazy" decoding="async" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0a14;
+        --surface: #14141f;
+        --hairline: rgba(157, 78, 221, 0.2);
+        --accent: #9d4edd;
+        --text: #c0c0c0;
+        --white: #ececf4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 1.5rem clamp(1rem, 4vw, 3rem) 3rem;
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background:
+          radial-gradient(ellipse 80% 60% at 50% -10%, rgba(42, 26, 74, 0.9) 0%, transparent 60%),
+          radial-gradient(circle at 15% 40%, rgba(157, 78, 221, 0.12) 0%, transparent 45%),
+          var(--bg);
+        min-height: 100vh;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      .hdr {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1rem;
+        align-items: baseline;
+        justify-content: space-between;
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid var(--hairline);
+      }
+
+      .hdr p {
+        margin: 0;
+      }
+
+      .brand {
+        color: var(--white);
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .notice {
+        font-size: 0.85rem;
+      }
+
+      .empty {
+        padding: 2rem;
+        border: 1px solid var(--hairline);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+
+      .grid a {
+        display: block;
+        overflow: hidden;
+        border: 1px solid var(--hairline);
+        border-radius: 8px;
+        background: var(--surface);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .grid a:hover,
+      .grid a:focus-visible {
+        border-color: var(--accent);
+        box-shadow: 0 0 18px rgba(157, 78, 221, 0.25);
+        outline: none;
+      }
+
+      .grid img {
+        display: block;
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .grid img {
+          scroll-behavior: auto;
+        }
+      }
+    </style>
+  </body>
+</html>
