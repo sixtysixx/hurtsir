@@ -15,7 +15,7 @@ Conversion notes:
     video->gif conversion looks badly banded.
 
 Usage:
-    python scripts/fetch_gifs.py gifs.json --out public/cattos --start-index 81
+    python scripts/fetch_gifs.py gifs.json --out public/giffuhs --start-index 81
     python scripts/fetch_gifs.py gifs.json --download-only
 """
 
@@ -112,7 +112,7 @@ def convert(source: Path, dest: Path, *, fps: int, width: int, dither: str,
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path, help="JSON file with a list of URLs")
-    parser.add_argument("--out", type=Path, default=Path("public/cattos"), help="GIF output dir")
+    parser.add_argument("--out", type=Path, default=Path("public/giffuhs"), help="GIF output dir")
     parser.add_argument("--cache", type=Path, default=Path(".cache/gif-videos"), help="video cache dir")
     parser.add_argument("--prefix", default="cat", help="output name prefix (default cat)")
     parser.add_argument("--start-index", type=int, default=81, help="first index (default 81)")

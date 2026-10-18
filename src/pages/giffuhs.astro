@@ -1,20 +1,20 @@
 ---
 // Cat gallery. Standalone page (like /rdd) so the grid owns the whole viewport.
-// Files live in /public/cattos and are listed at build time, so re-running
+// Files live in /public/giffuhs and are listed at build time, so re-running
 // scripts/scrape_cats.py is enough to add new entries - no edits needed here.
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 // Resolved from the project root: `import.meta.url` points at Vite's bundled
 // copy of this module, not at src/pages, so it cannot find public/.
-const dir = join(process.cwd(), 'public', 'cattos');
+const dir = join(process.cwd(), 'public', 'giffuhs');
 const files = existsSync(dir)
   ? readdirSync(dir)
       .filter((name) => name.endsWith('.gif'))
       .sort((a, b) => Number(a.match(/\d+/)?.[0] ?? 0) - Number(b.match(/\d+/)?.[0] ?? 0))
   : [];
 
-const title = 'Cattos -SirHurt';
+const title = 'giffuhs -SirHurt';
 ---
 
 <!DOCTYPE html>
@@ -29,7 +29,7 @@ const title = 'Cattos -SirHurt';
   </head>
   <body>
     <header class="hdr">
-      <p><a class="brand" href="/"><strong>SirHurt</strong></a> &mdash; Cattos</p>
+      <p><a class="brand" href="/"><strong>SirHurt</strong></a> &mdash; giffuhs</p>
       <p class="notice">
         {files.length} cat{files.length === 1 ? '' : 's'} &mdash;
         <a href="/guide/quick-start/">Back to the guide</a>
@@ -39,15 +39,15 @@ const title = 'Cattos -SirHurt';
     {
       files.length === 0 ? (
         <p class="empty">
-          No cat GIFs found in <code>public/cattos/</code>. Run
-          <code>python scripts/scrape_cats.py --out public/cattos</code> first.
+          No cat GIFs found in <code>public/giffuhs/</code>. Run
+          <code>python scripts/scrape_cats.py --out public/giffuhs</code> first.
         </p>
       ) : (
         <ul class="grid">
           {files.map((name) => (
             <li>
-              <a href={`/cattos/${name}`} target="_blank" rel="noopener">
-                <img src={`/cattos/${name}`} alt={`Cat GIF ${name}`} loading="lazy" decoding="async" />
+              <a href={`/giffuhs/${name}`} target="_blank" rel="noopener">
+                <img src={`/giffuhs/${name}`} alt={`Cat GIF ${name}`} loading="lazy" decoding="async" />
               </a>
             </li>
           ))}
