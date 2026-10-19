@@ -64,7 +64,7 @@ export default defineConfig({
           ],
         },
         { label: "Downgrade Thingamabob 6000", link: "/rdd/" },
-        { label: "gifs", link: "/giffuhs/" },
+        { label: "gifs", link: "/gifz/" },
       ],
     }),
   ],

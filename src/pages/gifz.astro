@@ -1,13 +1,13 @@
 ---
 // Cat gallery. Standalone page (like /rdd) so the grid owns the whole viewport.
-// Files live in /public/giffuhs and are listed at build time, so re-running
+// Files live in /public/gifz and are listed at build time, so re-running
 // scripts/scrape_cats.py is enough to add new entries - no edits needed here.
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 // Resolved from the project root: `import.meta.url` points at Vite's bundled
 // copy of this module, not at src/pages, so it cannot find public/.
-const dir = join(process.cwd(), 'public', 'giffuhs');
+const dir = join(process.cwd(), 'public', 'gifz');
 const files = existsSync(dir)
   ? readdirSync(dir)
       .filter((name) => name.endsWith('.gif'))
@@ -39,15 +39,15 @@ const title = 'gifs -SirHurt';
     {
       files.length === 0 ? (
         <p class="empty">
-          No cat GIFs found in <code>public/giffuhs/</code>. Run
-          <code>python scripts/scrape_cats.py --out public/giffuhs</code> first.
+          No cat GIFs found in <code>public/gifz/</code>. Run
+          <code>python scripts/scrape_cats.py --out public/gifz</code> first.
         </p>
       ) : (
         <ul class="grid">
           {files.map((name) => (
             <li>
-              <a href={`/giffuhs/${name}`} target="_blank" rel="noopener">
-                <img src={`/giffuhs/${name}`} alt={`Cat GIF ${name}`} loading="lazy" decoding="async" />
+              <a href={`/gifz/${name}`} target="_blank" rel="noopener">
+                <img src={`/gifz/${name}`} alt={`Cat GIF ${name}`} loading="lazy" decoding="async" />
               </a>
             </li>
           ))}
