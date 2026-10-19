@@ -1,6 +1,6 @@
 ---
 title: Preparation & Prerequisites
-description: Get Windows ready for SirHurt -a dedicated folder, antivirus exclusions, system file repair, and the runtimes the bootstrapper needs.
+description: Get Windows ready for SirHurt, including antivirus exclusions, system file repair, and the runtimes the bootstrapper needs.
 ---
 
 import { Steps, Aside } from "@astrojs/starlight/components";
@@ -28,13 +28,10 @@ obvious and predictable.
 1. Create a dedicated folder for sirhurt (if extracting with 7zip or winrar you can normally use the one created).
 
 2. Keep it **out of OneDrive-synced locations** such as Desktop or Documents. Cloud sync can
-   lock or "restore" files while you're installing, which produces confusing partial installs.
+   lock or "restore" files while you're installing, which produces confusing partial installs. (fuck onedrive ngl)
 
 3. Keep it **out of `C:\Program Files`**. That tree is write-protected, so updates and the
    Cleaner both need elevation just to touch their own files.
-
-4. Note the exact path down -you'll paste it into your antivirus exclusion list in the next
-   step.
 
 </Steps>
 
@@ -56,18 +53,15 @@ downstream will work, and the failure will look random rather than like an antiv
 4. If it was previously removed, open **Protection history** and restore the quarantined SirHurt
    files before continuing.
 
-5. Add an exclusion for the **Roblox install directory** as well. The bootstrapper writes there
-   when injecting, and a scanner can delete the payload mid-injection.
-
-6. Verify the exclusions stuck by opening the exclusions list again and confirming both entries
+5. Verify the exclusions stuck by opening the exclusions list again and confirming both entries
    are present.
 
 </Steps>
 
 <Aside type="danger" title="Exclude folders, not whole drives">
   Only ever exclude the specific folders above, and don't leave real-time
-  protection permanently disabled. Excluding an entire drive -or turning
-  protection off for good -is a genuine security risk and not something you need
+  protection permanently disabled. Excluding an entire drive or turning
+  protection off is a genuine security risk and not something you need
   in order to run SirHurt.
 </Aside>
 
@@ -92,7 +86,7 @@ crashes. This chain checks the component store and repairs it from a known-good 
    different percentages and that is normal.
 
 4. Check the last line. **SUCCESS** means the component store is healthy. If you get **ERROR**,
-   read the message it prints -a failed repair usually points at a disk or permissions problem
+   read the message it prints a failed repair usually points at a disk or permissions problem
    worth fixing before you go further.
 
 5. Reboot once before installing anything else.
@@ -102,7 +96,7 @@ crashes. This chain checks the component store and repairs it from a known-good 
 ## Step 4 - Install the required runtimes
 
 SirHurt will not start without these. Install **both architectures** of the Visual C++
-redistributables -a 64-bit Windows install is not a substitute for the x86 package.
+redistributables a 64-bit Windows install is not a substitute for the x86 package.
 
 <Steps>
 
@@ -146,5 +140,5 @@ debug later.
 </Steps>
 
 If every box is ticked, continue to [Roblox Settings](/guide/roblox-settings/) to configure
-Roblox itself. If something failed, check [Troubleshooting](/guide/troubleshooting/) -the
-antivirus and hung-bootstrapper sections cover these exact symptoms.
+Roblox itself. If something failed, check [Troubleshooting](/guide/troubleshooting/) the
+antivirus and hung bootstrapper sections cover these exact symptoms.
