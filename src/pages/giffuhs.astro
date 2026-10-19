@@ -14,7 +14,7 @@ const files = existsSync(dir)
       .sort((a, b) => Number(a.match(/\d+/)?.[0] ?? 0) - Number(b.match(/\d+/)?.[0] ?? 0))
   : [];
 
-const title = 'giffuhs -SirHurt';
+const title = 'gifs -SirHurt';
 ---
 
 <!DOCTYPE html>
@@ -29,7 +29,7 @@ const title = 'giffuhs -SirHurt';
   </head>
   <body>
     <header class="hdr">
-      <p><a class="brand" href="/"><strong>SirHurt</strong></a> &mdash; giffuhs</p>
+      <p><a class="brand" href="/"><strong>SirHurt</strong></a> &mdash; gifs</p>
       <p class="notice">
         {files.length} cat{files.length === 1 ? '' : 's'} &mdash;
         <a href="/guide/quick-start/">Back to the guide</a>
