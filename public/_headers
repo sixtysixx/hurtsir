@@ -1,0 +1,33 @@
+# Cloudflare Pages response headers.
+# Pages serves everything with `max-age=0, must-revalidate` unless told
+# otherwise, which forces a revalidation round trip on every repeat visit -
+# including each of the ~400 cat images under /gifz. Content-hashed or
+# never-changing files can be cached hard; HTML is deliberately left out so
+# deploys show up immediately.
+
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Animated WebP cat gallery. Names are stable once scraped, and a re-scrape
+# writes a new file name rather than changing an existing one.
+/gifz/*.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/pagefind/*
+  Cache-Control: public, max-age=86400
+
+/rdd/css/*
+  Cache-Control: public, max-age=604800
+
+/rdd/js/*
+  Cache-Control: public, max-age=604800
+
+/rdd/img/*
+  Cache-Control: public, max-age=604800
+
+# SirHurt bootstrapper payloads, fetched on demand by the guide.
+/mm2*.lua
+  Cache-Control: public, max-age=604800

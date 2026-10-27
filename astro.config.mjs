@@ -7,6 +7,9 @@ export default defineConfig({
   site: "https://sirhurt.pages.dev",
   output: "static",
   devToolbar: { enabled: false },
+  // Sidebar/wiki links are the main navigation path: warm the HTML on hover so
+  // the next page is already in the browser cache when it is clicked.
+  prefetch: { prefetchAll: true, defaultStrategy: "hover" },
   integrations: [
     starlight({
       title: ":3",
@@ -18,24 +21,17 @@ export default defineConfig({
         Footer: "./src/components/Footer.astro",
       },
       head: [
-        // Display face for titles. Matches the RDD page, which already uses Poppins.
-        {
-          tag: "link",
-          attrs: { rel: "preconnect", href: "https://fonts.googleapis.com" },
-        },
-        {
-          tag: "link",
-          attrs: {
-            rel: "preconnect",
-            href: "https://fonts.gstatic.com",
-            crossorigin: true,
-          },
-        },
+        // Display face for titles (Poppins) is self-hosted - see custom.css.
+        // Kept in /public/fonts so there is no cross-origin stylesheet or font
+        // request blocking first paint. Preload the weight used by headings.
         {
           tag: "link",
           attrs: {
-            rel: "stylesheet",
-            href: "https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap",
+            rel: "preload",
+            href: "/fonts/poppins-600.woff2",
+            as: "font",
+            type: "font/woff2",
+            crossorigin: "",
           },
         },
       ],

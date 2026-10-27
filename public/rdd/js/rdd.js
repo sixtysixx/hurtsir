@@ -263,6 +263,27 @@ function apiSuffix() {
 
 const urlParams = new URLSearchParams(window.location.search);
 
+// JSZip is ~220 KB and only used once a download actually starts, so it is
+// fetched on demand instead of costing every visitor of /rdd. Callers await
+// this right before the first `new JSZip()`.
+let _jszipLoad = null;
+function ensureJSZip() {
+  if (typeof JSZip !== "undefined") return Promise.resolve();
+  if (!_jszipLoad) {
+    _jszipLoad = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "/rdd/js/jszip.min.js";
+      script.onload = () => resolve();
+      script.onerror = () => {
+        _jszipLoad = null;
+        reject(new Error("Failed to load JSZip from /rdd/js/jszip.min.js"));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return _jszipLoad;
+}
+
 const logBox = document.getElementById("logBox");
 const form = document.getElementById("form");
 const formDiv = document.getElementById("formDiv");
@@ -954,6 +975,12 @@ async function dlPackages(
 
   log(`[+] Fetching blobs for BinaryType \`${binaryType}\`..`);
 
+  try {
+    await ensureJSZip();
+  } catch (error) {
+    log(`[!] ${error.message}`);
+    return;
+  }
   zip = new JSZip();
   zip.file(
     "AppSettings.xml",

@@ -1,16 +1,21 @@
 ---
 // Cat gallery. Standalone page (like /rdd) so the grid owns the whole viewport.
-// Files live in /public/gifz and are listed at build time, so re-running
-// scripts/scrape_cats.py is enough to add new entries - no edits needed here.
+// Files live in /public/gifz and are listed at build time, so dropping a new
+// file in there is enough to add an entry - no edits needed here.
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 // Resolved from the project root: `import.meta.url` points at Vite's bundled
 // copy of this module, not at src/pages, so it cannot find public/.
 const dir = join(process.cwd(), 'public', 'gifz');
+
+// scripts/optimize_gifs.mjs (run as `prebuild`) converts every GIF in this
+// folder to an animated WebP and deletes the source, so what is served is ~17x
+// smaller than the original GIFs. Old /gifz/<name>.gif links are 301'd to the
+// WebP by the generated public/_redirects.
 const files = existsSync(dir)
   ? readdirSync(dir)
-      .filter((name) => name.endsWith('.gif'))
+      .filter((name) => name.endsWith('.webp'))
       .sort((a, b) => Number(a.match(/\d+/)?.[0] ?? 0) - Number(b.match(/\d+/)?.[0] ?? 0))
   : [];
 
@@ -39,15 +44,22 @@ const title = 'gifs -SirHurt';
     {
       files.length === 0 ? (
         <p class="empty">
-          No cat GIFs found in <code>public/gifz/</code>. Run
-          <code>python scripts/scrape_cats.py --out public/gifz</code> first.
+          No images found in <code>public/gifz/</code>. Drop GIFs in there and
+          run <code>npm run build</code> (the prebuild step converts them to WebP).
         </p>
       ) : (
         <ul class="grid">
           {files.map((name) => (
             <li>
               <a href={`/gifz/${name}`} target="_blank" rel="noopener">
-                <img src={`/gifz/${name}`} alt={`Cat GIF ${name}`} loading="lazy" decoding="async" />
+                <img
+                  src={`/gifz/${name}`}
+                  alt={`Cat GIF ${name.replace(/\.webp$/, '')}`}
+                  width="360"
+                  height="360"
+                  loading="lazy"
+                  decoding="async"
+                />
               </a>
             </li>
           ))}
@@ -125,6 +137,12 @@ const title = 'gifs -SirHurt';
         padding: 0;
         margin: 0;
         list-style: none;
+      }
+
+      .grid li {
+        /* 394 tiles: skip layout/paint for the ones far outside the viewport. */
+        content-visibility: auto;
+        contain-intrinsic-size: 180px 180px;
       }
 
       .grid a {

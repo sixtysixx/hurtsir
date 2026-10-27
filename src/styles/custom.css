@@ -3,7 +3,25 @@
  * Amethyst + silver palette carried over from the original one-page site.
  */
 
-/* Force the dark amethyst look in every theme state (Starlight ships a toggle). */
+/* Display face (Poppins), self-hosted latin subset so the first paint does not
+ * wait on fonts.googleapis.com -> fonts.gstatic.com. Only the weight the theme
+ * actually renders in Poppins is shipped: 600, used by every heading and the
+ * site title. */
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/poppins-600.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Force the dark amethyst look in every theme state (Starlight ships a toggle).
+ * The accent ramps are pinned too: asides/badges read --sl-color-*-low for their
+ * background and -high for their text, and the light ramp would put pale panels
+ * behind the forced-light text when the OS asks for a light theme. */
 :root,
 :root[data-theme="light"],
 :root[data-theme="dark"] {
@@ -12,6 +30,17 @@
   --sl-color-accent-low: #2a1a4a;
   --sl-color-accent: #9d4edd;
   --sl-color-accent-high: #d9b3ff;
+
+  --sl-color-blue-low: hsl(var(--sl-hue-blue), 54%, 20%);
+  --sl-color-blue-high: hsl(var(--sl-hue-blue), 100%, 87%);
+  --sl-color-purple-low: hsl(var(--sl-hue-purple), 39%, 22%);
+  --sl-color-purple-high: hsl(var(--sl-hue-purple), 82%, 89%);
+  --sl-color-orange-low: hsl(var(--sl-hue-orange), 39%, 22%);
+  --sl-color-orange-high: hsl(var(--sl-hue-orange), 82%, 87%);
+  --sl-color-red-low: hsl(var(--sl-hue-red), 39%, 22%);
+  --sl-color-red-high: hsl(var(--sl-hue-red), 82%, 87%);
+  --sl-color-green-low: hsl(var(--sl-hue-green), 39%, 22%);
+  --sl-color-green-high: hsl(var(--sl-hue-green), 82%, 80%);
 
   --sl-color-white: #ececf4;
   --sl-color-gray-1: #c8c8d4;

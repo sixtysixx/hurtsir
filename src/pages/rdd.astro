@@ -161,8 +161,7 @@ const title = 'RDD -SirHurt Roblox Deployment Downloader';
       })();
     </script>
 
-    <!-- Order matters: JSZip must be defined before rdd.js runs `new JSZip()`. -->
-    <script is:inline src="/rdd/js/jszip.min.js"></script>
+    <!-- JSZip (~220 KB) is only fetched by rdd.js once a download starts. -->
     <script is:inline src="/rdd/js/rdd.js"></script>
 
     <style>
