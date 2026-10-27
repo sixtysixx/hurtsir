@@ -36,3 +36,4 @@ cats/
 __pycache__/
 .venv/
 .pytest_cache/
+.agents/mcp.json
