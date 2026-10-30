@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import sitemap from "@astrojs/sitemap";
 
 // https://astro.build/config
 export default defineConfig({
@@ -62,6 +63,9 @@ export default defineConfig({
         { label: "Downgrade Thingamabob 6000", link: "/rdd/" },
         { label: "gifs", link: "/gifz/" },
       ],
+    }),
+    sitemap({
+      filter: (url) => !url.includes('/secretgifs'),
     }),
   ],
 });
