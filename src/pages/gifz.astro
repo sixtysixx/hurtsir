@@ -4,6 +4,7 @@
 // file in there is enough to add an entry - no edits needed here.
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import GifGallery from '../components/GifGallery.astro';
 
 // Resolved from the project root: `import.meta.url` points at Vite's bundled
 // copy of this module, not at src/pages, so it cannot find public/.
@@ -41,31 +42,12 @@ const title = 'gifs -SirHurt';
       </p>
     </header>
 
-    {
-      files.length === 0 ? (
-        <p class="empty">
-          No images found in <code>public/gifz/</code>. Drop GIFs in there and
-          run <code>npm run build</code> (the prebuild step converts them to WebP).
-        </p>
-      ) : (
-        <ul class="grid">
-          {files.map((name) => (
-            <li>
-              <a href={`/gifz/${name}`} target="_blank" rel="noopener">
-                <img
-                  src={`/gifz/${name}`}
-                  alt={`Cat GIF ${name.replace(/\.webp$/, '')}`}
-                  width="360"
-                  height="360"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </a>
-            </li>
-          ))}
-        </ul>
-      )
-    }
+    <GifGallery
+      files={files}
+      basePath="/gifz"
+      label="Cat GIF"
+      emptyMessage="No images found in public/gifz. Drop GIFs in there and run npm run build (the prebuild step converts them to WebP)."
+    />
 
     <style>
       :root {
@@ -121,57 +103,6 @@ const title = 'gifs -SirHurt';
 
       .notice {
         font-size: 0.85rem;
-      }
-
-      .empty {
-        padding: 2rem;
-        border: 1px solid var(--hairline);
-        border-radius: 8px;
-        background: var(--surface);
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 1rem;
-        padding: 0;
-        margin: 0;
-        list-style: none;
-      }
-
-      .grid li {
-        /* 394 tiles: skip layout/paint for the ones far outside the viewport. */
-        content-visibility: auto;
-        contain-intrinsic-size: 180px 180px;
-      }
-
-      .grid a {
-        display: block;
-        overflow: hidden;
-        border: 1px solid var(--hairline);
-        border-radius: 8px;
-        background: var(--surface);
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-      }
-
-      .grid a:hover,
-      .grid a:focus-visible {
-        border-color: var(--accent);
-        box-shadow: 0 0 18px rgba(157, 78, 221, 0.25);
-        outline: none;
-      }
-
-      .grid img {
-        display: block;
-        width: 100%;
-        height: 180px;
-        object-fit: cover;
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .grid img {
-          scroll-behavior: auto;
-        }
       }
     </style>
   </body>

@@ -1,0 +1,173 @@
+---
+// Tile grid shared by the standalone GIF galleries (/gifz, /secretgifs).
+// Each tile opens the animation in a new tab; the copy button puts the
+// absolute image URL on the clipboard.
+interface Props {
+  files: string[];
+  basePath: string;
+  label: string;
+  emptyMessage: string;
+}
+const { files, basePath, label, emptyMessage } = Astro.props;
+// Per-segment encoding: names are used in hrefs, so `#`, spaces and `%` must
+// not be interpreted by the browser or the static host.
+const url = (name: string) => `${basePath}/${encodeURIComponent(name)}`;
+---
+
+{
+  files.length === 0 ? (
+    <p class="empty">{emptyMessage}</p>
+  ) : (
+    <ul class="grid">
+      {files.map((name) => (
+        <li>
+          <a href={url(name)} target="_blank" rel="noopener">
+            <img
+              src={url(name)}
+              alt={`${label} ${name.replace(/\.webp$/, '')}`}
+              width="360"
+              height="360"
+              loading="lazy"
+              decoding="async"
+            />
+          </a>
+          <button
+            type="button"
+            class="copy"
+            data-copy-link={url(name)}
+            aria-label={`Copy link to ${name}`}
+          >
+            copy
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+<style>
+  .empty {
+    padding: 2rem;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .grid li {
+    /* Hundreds of tiles: skip layout/paint for the ones far outside the
+       viewport. */
+    position: relative;
+    content-visibility: auto;
+    contain-intrinsic-size: 182px 182px;
+  }
+
+  .grid a {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    background: var(--surface);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .grid a:hover,
+  .grid a:focus-visible {
+    border-color: var(--accent);
+    box-shadow: 0 0 18px rgba(157, 78, 221, 0.25);
+    outline: none;
+  }
+
+  .grid img {
+    display: block;
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+  }
+
+  .copy {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    font: inherit;
+    font-size: 0.62rem;
+    line-height: 1;
+    padding: 0.3rem 0.45rem;
+    color: var(--text);
+    background: rgba(10, 10, 20, 0.82);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .grid li:hover .copy,
+  .copy:focus-visible {
+    opacity: 1;
+  }
+
+  .copy:hover,
+  .copy:focus-visible {
+    color: var(--white);
+    border-color: var(--accent);
+    outline: none;
+  }
+
+  .copy.is-copied {
+    color: #7bd88f;
+    border-color: #7bd88f;
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .copy,
+    .grid a {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  // navigator.clipboard requires a secure context; the textarea fallback keeps
+  // the button working over plain-HTTP LAN previews.
+  const FLASH_MS = 1200;
+
+  document.querySelectorAll('[data-copy-link]').forEach((button) => {
+    let timer;
+
+    button.addEventListener('click', async () => {
+      const link = new URL(button.dataset.copyLink, location.href).href;
+
+      try {
+        await navigator.clipboard.writeText(link);
+      } catch {
+        const scratch = document.createElement('textarea');
+        scratch.value = link;
+        scratch.setAttribute('readonly', '');
+        scratch.style.position = 'fixed';
+        scratch.style.opacity = '0';
+        document.body.append(scratch);
+        scratch.select();
+        document.execCommand('copy');
+        scratch.remove();
+      }
+
+      button.textContent = 'copied';
+      button.classList.add('is-copied');
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        button.textContent = 'copy';
+        button.classList.remove('is-copied');
+      }, FLASH_MS);
+    });
+  });
+</script>
