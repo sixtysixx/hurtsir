@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
-"""Download Sirstrap and SirHurt into one folder.
+"""Set up SirHurt in one pass: exclusions, repair, runtimes, launch stack.
 
-Partially automates stage 3 of https://sirhurt.pages.dev/guide/:
-Sirstrap is fetched from its own releases (no account needed), SirHurt needs the
-single-use link you get from sirhurt.net after logging in, and that link is a
-gofile.io folder or a Box share.
+Automates stages 1-3 of https://sirhurt.pages.dev/guide/:
+
+* scans the folder this script lives in for a SirHurt archive, moves it into the
+  install folder (validated to be outside OneDrive and Program Files), adds a
+  Windows Defender exclusion for that folder, then extracts the archive;
+* runs the system-repair chain (SFC, then DISM CheckHealth/ScanHealth/RestoreHealth);
+* installs both Visual C++ redistributables and the .NET Framework 4.8.1 web
+  installer;
+* downloads Sirstrap's UI, Cleaner and CLI builds from their own releases;
+* otherwise SirHurt needs the single-use link you get from sirhurt.net after
+  logging in - a gofile.io folder or a Box share;
+* turns off "Launch at startup" and "Minimize to tray when closed" in Roblox's
+  %LOCALAPPDATA%\\Roblox\\LocalStorage\\appStorage.json.
 
 Only the public download link is handled - no credentials are read or stored.
-Requires Python 3.10+ and builds with Nuitka (see build.ps1 next to this file).
+Requires Python 3.10+, Administrator for the exclusion/repair stages, and builds
+with Nuitka (see build.ps1 next to this file).
 """
 
 from __future__ import annotations
@@ -19,6 +29,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -29,12 +40,33 @@ import webbrowser
 import zipfile
 from pathlib import Path
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 SIRSTRAP_RELEASES_API = "https://codeberg.org/api/v1/repos/Sirstrap/Sirstrap/releases?limit=20"
 SIRSTRAP_DOWNLOAD_BASE = "https://sirstrap.com/releases"
 SIRSTRAP_FALLBACK_TAG = "v10.12.7.4-beta"
 SIRSTRAP_ASSETS = (("Sirstrap.UI.zip", "sirstrap"), ("SirHurt.Cleaner.CLI.zip", "cleaner"))
+SIRSTRAP_CLI_URL = "https://www.sirstrap.com/releases/download.php?file=Sirstrap.CLI.zip"
+SIRSTRAP_CLI_ASSET = "Sirstrap.CLI.zip"
+SIRSTRAP_CLI_FOLDER = "sirstrap-cli"
+# The thank-you page (DOTNET481_PAGE) is HTML; its "download manually" link is
+# this fwlink, which resolves to NDP481-Web.exe.
+DOTNET481_PAGE = "https://dotnet.microsoft.com/en-us/download/dotnet-framework/thank-you/net481-web-installer"
+DOTNET481_WEB_INSTALLER = "https://go.microsoft.com/fwlink/?LinkId=2203304"
+RUNTIMES = (
+    ("vc_redist.x86.exe", "https://aka.ms/vc14/vc_redist.x86.exe", ("/install", "/quiet", "/norestart")),
+    ("vc_redist.x64.exe", "https://aka.ms/vc14/vc_redist.x64.exe", ("/install", "/quiet", "/norestart")),
+    ("NDP481-Web.exe", DOTNET481_WEB_INSTALLER, ("/q", "/norestart")),
+)
+RUNTIME_OK_CODES = frozenset({0, 1638, 3010})
+REPAIR_CHAIN = (
+    ("SFC scan", "sfc.exe", ("/scannow",)),
+    ("DISM CheckHealth", "dism.exe", ("/Online", "/Cleanup-Image", "/CheckHealth")),
+    ("DISM ScanHealth", "dism.exe", ("/Online", "/Cleanup-Image", "/ScanHealth")),
+    ("DISM RestoreHealth", "dism.exe", ("/Online", "/Cleanup-Image", "/RestoreHealth")),
+)
+ROBLOX_STORAGE_PARTS = ("Roblox", "LocalStorage", "appStorage.json")
+ROBLOX_SETTINGS = {"LaunchAtStartup": "false", "MinimizeToTray": "false"}
 GOFILE_RE = re.compile(r"^https?://(?:www\.)?gofile\.io/d/([A-Za-z0-9]{6,})$", re.I)
 BOX_RE = re.compile(r"^https?://(?:www\.)?app\.box\.com/s/([A-Za-z0-9]{8,})$", re.I)
 ARCHIVE_SUFFIXES = (".zip", ".7z", ".rar")
@@ -204,6 +236,13 @@ def preflight() -> None:
         )
 
 
+def require_admin(reason: str) -> None:
+    if not is_admin():
+        raise SetupError(
+            f"run this script as Administrator to {reason} (or skip that stage)"
+        )
+
+
 def protected_roots() -> list[Path]:
     roots: list[Path] = []
     for key in ("ProgramFiles", "ProgramFiles(x86)", "ProgramW6432"):
@@ -247,6 +286,169 @@ def resolve_target(raw: str | None, *, dry_run: bool) -> Path:
 
 
 # --------------------------------------------------------------------------- #
+# Local SirHurt archive, Defender exclusion, repair, runtimes
+# --------------------------------------------------------------------------- #
+
+
+def script_directory() -> Path:
+    """The folder this script (or the Nuitka onefile exe) was launched from."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def find_local_archive(folder: Path) -> Path | None:
+    """Newest archive in folder whose name mentions SirHurt, if there is one."""
+    try:
+        entries = list(folder.iterdir())
+    except OSError as exc:
+        warn(f"cannot scan {folder}: {exc}")
+        return None
+    found: list[tuple[float, Path]] = []
+    for entry in entries:
+        if not entry.is_file() or entry.suffix.lower() not in ARCHIVE_SUFFIXES:
+            continue
+        if "sirhurt" not in entry.name.lower():
+            continue
+        try:
+            found.append((entry.stat().st_mtime, entry))
+        except OSError:
+            continue
+    if not found:
+        return None
+    found.sort(key=lambda item: item[0], reverse=True)
+    for _, extra in found[1:]:
+        info(f"  ignoring {extra.name} (using the newest archive, {found[0][1].name})")
+    return found[0][1]
+
+
+def adopt_local_archive(archive: Path, target: Path, *, dry_run: bool) -> None:
+    """Move a SirHurt archive out of the script folder and extract it into target."""
+    downloads = target / "downloads"
+    info(f"\n[SirHurt] local archive {archive}")
+    info(f"  secluded folder: {target}")
+    info(f"  target: {target / 'sirhurt'}")
+    if dry_run:
+        info(f"  would move it to {downloads} and extract it")
+        return
+    downloads.mkdir(parents=True, exist_ok=True)
+    if archive.parent.resolve() == downloads.resolve():
+        destination = archive
+    else:
+        destination = downloads / archive.name
+        try:
+            shutil.move(str(archive), str(destination))
+        except OSError as exc:
+            raise SetupError(f"cannot move {archive} to {destination}: {exc}") from exc
+        info(f"  moved to {destination}")
+    extract_sirhurt(destination, target)
+
+
+def powershell(script: str, *, timeout: float | None = 120) -> subprocess.CompletedProcess[str]:
+    shell = shutil.which("powershell") or shutil.which("pwsh")
+    if shell is None:
+        raise SetupError("PowerShell was not found; set the exclusion up by hand")
+    try:
+        return subprocess.run(
+            [shell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise SetupError("PowerShell timed out") from exc
+    except OSError as exc:
+        raise SetupError(f"cannot run PowerShell: {exc}") from exc
+
+
+def same_folder(left: str, right: Path) -> bool:
+    def normalise(value: str) -> str:
+        return os.path.normcase(os.path.abspath(value)).rstrip("\\/")
+
+    return normalise(left) == normalise(str(right))
+
+
+def defender_exclusions() -> list[str]:
+    result = powershell("@((Get-MpPreference).ExclusionPath) | ForEach-Object { $_ }")
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip() or f"exit code {result.returncode}"
+        raise SetupError(detail)
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def add_defender_exclusion(folder: Path, *, dry_run: bool) -> None:
+    info(f"\n[Exclusion] {folder}")
+    if dry_run:
+        info("  would add a Windows Defender folder exclusion")
+        return
+    require_admin("add the Defender exclusion")
+    try:
+        if any(same_folder(entry, folder) for entry in defender_exclusions()):
+            info("  already excluded")
+            return
+    except SetupError as exc:
+        warn(f"cannot read Defender's exclusion list ({exc}); trying to add it anyway")
+    quoted = str(folder).replace("'", "''")
+    result = powershell(f"Add-MpPreference -ExclusionPath '{quoted}' -ErrorAction Stop")
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip() or f"exit code {result.returncode}"
+        warn(f"could not add the exclusion ({detail}); add {folder} in Windows Security by hand")
+        return
+    try:
+        verified = any(same_folder(entry, folder) for entry in defender_exclusions())
+    except SetupError:
+        verified = False
+    info("  added and verified" if verified else "  added (Windows Security may take a moment to list it)")
+
+
+def repair_system_files(*, dry_run: bool) -> None:
+    info("\n[Repair] Windows component store")
+    info("  this is the slow part - SFC and DISM each take several minutes")
+    for name, executable, arguments in REPAIR_CHAIN:
+        info(f"  ==> {name}: {executable} {' '.join(arguments)}")
+    if dry_run:
+        return
+    require_admin("run SFC and DISM")
+    for name, executable, arguments in REPAIR_CHAIN:
+        try:
+            result = subprocess.run([executable, *arguments], check=False)
+        except OSError as exc:
+            raise SetupError(f"cannot run {executable}: {exc}") from exc
+        if result.returncode not in (0, 3010):
+            raise SetupError(
+                f"{name} failed with exit code {result.returncode}; "
+                "repair the component store before installing SirHurt"
+            )
+    info("  repair chain finished; reboot before the first launch")
+
+
+def install_runtimes(*, dry_run: bool) -> None:
+    info("\n[Runtimes] Visual C++ x86, Visual C++ x64, .NET Framework 4.8.1")
+    for name, url, arguments in RUNTIMES:
+        info(f"  {name}: {url} {' '.join(arguments)}")
+    if dry_run:
+        return
+    with tempfile.TemporaryDirectory(prefix="sirhurt-runtimes-") as scratch:
+        for name, url, arguments in RUNTIMES:
+            info(f"\n  {name}: downloading")
+            installer = Path(scratch) / name
+            download(url, installer)
+            info(f"  {name}: installing ({' '.join(arguments)})")
+            try:
+                result = subprocess.run([str(installer), *arguments], check=False)
+            except OSError as exc:
+                raise SetupError(f"cannot run {name}: {exc}") from exc
+            if result.returncode == 1638:
+                info("    a newer version is already installed")
+            elif result.returncode == 3010:
+                warn(f"    {name} installed; it needs a reboot to finish")
+            elif result.returncode not in RUNTIME_OK_CODES:
+                raise SetupError(f"{name} failed with exit code {result.returncode}")
+    info("  runtimes installed; reboot before the first launch")
+
+
+# --------------------------------------------------------------------------- #
 # Sirstrap
 # --------------------------------------------------------------------------- #
 
@@ -276,9 +478,14 @@ def resolve_sirstrap_tag() -> str:
 
 
 def install_sirstrap(target: Path, tag: str, *, dry_run: bool) -> None:
-    for asset, subfolder in SIRSTRAP_ASSETS:
-        url = f"{SIRSTRAP_DOWNLOAD_BASE}/{tag}/{asset}"
-        destination = target / subfolder
+    jobs = [
+        (f"{SIRSTRAP_DOWNLOAD_BASE}/{tag}/{asset}", asset, target / subfolder)
+        for asset, subfolder in SIRSTRAP_ASSETS
+    ]
+    # The CLI build is served from sirstrap.com's latest-release endpoint rather
+    # than a tag path, and ships only Sirstrap.exe - keep it out of sirstrap/.
+    jobs.append((SIRSTRAP_CLI_URL, SIRSTRAP_CLI_ASSET, target / SIRSTRAP_CLI_FOLDER))
+    for url, asset, destination in jobs:
         info(f"\n[Sirstrap] {asset}")
         info(f"  url:    {url}")
         info(f"  target: {destination}")
@@ -458,6 +665,80 @@ def install_sirhurt(target: Path, link: tuple[str, str, str]) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Roblox settings (appStorage.json)
+# --------------------------------------------------------------------------- #
+
+
+def roblox_storage_path() -> Path:
+    local = os.environ.get("LOCALAPPDATA")
+    if not local:
+        raise SetupError("LOCALAPPDATA is not set; cannot find Roblox's appStorage.json")
+    return Path(local).joinpath(*ROBLOX_STORAGE_PARTS)
+
+
+def roblox_running() -> bool:
+    try:
+        result = subprocess.run(
+            ["tasklist", "/FI", "IMAGENAME eq RobloxPlayerBeta.exe", "/NH"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return "RobloxPlayerBeta" in (result.stdout or "")
+
+
+def configure_roblox_settings(*, dry_run: bool) -> None:
+    """Force "Launch at startup" and "Minimize to tray when closed" off."""
+    path = roblox_storage_path()
+    info(f"\n[Roblox] {path}")
+    settings: dict[str, object] = {}
+    if path.is_file():
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise SetupError(f"cannot read {path}: {exc}") from exc
+        if not isinstance(loaded, dict):
+            raise SetupError(f"{path} does not contain a JSON object")
+        settings = loaded
+    else:
+        action = "would create" if dry_run else "creating"
+        info(f"  no appStorage.json yet - {action} one with both settings off")
+
+    changed = False
+    for key, disabled in ROBLOX_SETTINGS.items():
+        current = settings.get(key)
+        # Roblox stores these as the strings "true"/"false"; keep that shape.
+        desired: object = disabled if isinstance(current, str) or current is None else not bool(current)
+        if current == desired:
+            info(f"  {key}: already {disabled}")
+            continue
+        info(f"  {key}: {current!r} -> {desired!r}")
+        settings[key] = desired
+        changed = True
+    if not changed:
+        return
+    if dry_run:
+        info("  would save appStorage.json")
+        return
+    if roblox_running():
+        warn("Roblox is running - close it, or it may write these settings back when it exits")
+    backup = path.with_name(path.name + ".bak")
+    partial = path.with_name(path.name + ".part")
+    try:
+        if path.is_file() and not backup.exists():
+            shutil.copy2(path, backup)
+        partial.write_text(json.dumps(settings, separators=(",", ":")), encoding="utf-8")
+        os.replace(partial, path)
+    except OSError as exc:
+        partial.unlink(missing_ok=True)
+        raise SetupError(f"cannot write {path}: {exc}") from exc
+    info(f"  saved{' (backup: ' + backup.name + ')' if backup.exists() else ''}")
+
+
+# --------------------------------------------------------------------------- #
 # CLI
 # --------------------------------------------------------------------------- #
 
@@ -465,8 +746,8 @@ def install_sirhurt(target: Path, link: tuple[str, str, str]) -> None:
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="SirHurt-Setup",
-        description="Download Sirstrap and SirHurt into one folder (stage 3 of the guide).",
-        epilog="Guide: https://sirhurt.pages.dev/guide/install/",
+        description="Prepare Windows, then download Sirstrap and SirHurt into one folder (stages 1-3).",
+        epilog="Guide: https://sirhurt.pages.dev/guide/",
     )
     parser.add_argument(
         "--dir",
@@ -475,33 +756,84 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="install folder (default: %(default)s)",
     )
     parser.add_argument("--link", metavar="URL", help="SirHurt download link (gofile.io or app.box.com)")
-    parser.add_argument("--skip-sirstrap", action="store_true", help="don't download Sirstrap or the Cleaner")
-    parser.add_argument("--skip-sirhurt", action="store_true", help="don't download SirHurt")
+    parser.add_argument(
+        "--archive",
+        metavar="PATH",
+        help="SirHurt archive to use instead of scanning this script's folder",
+    )
+    parser.add_argument(
+        "--no-local-archive",
+        action="store_true",
+        help="ignore any SirHurt archive sitting next to this script",
+    )
+    parser.add_argument(
+        "--skip-sirstrap",
+        action="store_true",
+        help="don't download Sirstrap (UI, Cleaner or CLI)",
+    )
+    parser.add_argument("--skip-sirhurt", action="store_true", help="don't install SirHurt")
+    parser.add_argument("--skip-exclusions", action="store_true", help="don't add the Defender exclusion")
+    parser.add_argument("--skip-repair", action="store_true", help="don't run SFC and DISM")
+    parser.add_argument("--skip-runtimes", action="store_true", help="don't install VC++ and .NET")
+    parser.add_argument(
+        "--skip-roblox-settings",
+        action="store_true",
+        help="don't touch Roblox's appStorage.json",
+    )
     parser.add_argument("--dry-run", action="store_true", help="resolve everything and print it, write nothing")
     parser.add_argument("--version", action="version", version=f"SirHurt Setup {__version__}")
     return parser.parse_args(argv)
 
 
-def summarize(target: Path) -> None:
+def summarize(target: Path, *, reboot_expected: bool) -> None:
     info("\nDone. Layout:")
     for entry in sorted(target.iterdir(), key=lambda path: path.name.lower()):
         info(f"  {entry.name}{os.sep if entry.is_dir() else ''}")
-    info("\nNext: stage 4 of the guide - launch Roblox, join a game, then run the SirHurt loader")
+    if reboot_expected:
+        info("\nReboot before continuing - the runtimes register themselves at boot.")
+    info("Next: stage 4 of the guide - launch Roblox, join a game, then run the SirHurt loader")
     info("      as Administrator: https://sirhurt.pages.dev/guide/injection/")
 
 
 def run(args: argparse.Namespace) -> int:
-    if args.skip_sirstrap and args.skip_sirhurt:
-        raise SetupError("nothing to do: both --skip-sirstrap and --skip-sirhurt were given")
+    if (
+        args.skip_sirstrap
+        and args.skip_sirhurt
+        and args.skip_exclusions
+        and args.skip_repair
+        and args.skip_runtimes
+        and args.skip_roblox_settings
+    ):
+        raise SetupError("nothing to do: every stage was skipped")
     preflight()
     if args.link:
         classify_link(args.link)  # fail fast on a malformed --link
     target = resolve_target(args.dir, dry_run=args.dry_run)
+
+    local_archive: Path | None = None
+    if not args.skip_sirhurt:
+        if args.archive:
+            local_archive = Path(args.archive).expanduser()
+            if not local_archive.is_file():
+                raise SetupError(f"no such archive: {local_archive}")
+        elif not args.no_local_archive:
+            local_archive = find_local_archive(script_directory())
+            if local_archive is None:
+                info(f"\n[SirHurt] no SirHurt archive in {script_directory()}")
+
+    if not args.skip_exclusions:
+        add_defender_exclusion(target, dry_run=args.dry_run)
+    if local_archive is not None:
+        adopt_local_archive(local_archive, target, dry_run=args.dry_run)
+    if not args.skip_repair:
+        repair_system_files(dry_run=args.dry_run)
+    if not args.skip_runtimes:
+        install_runtimes(dry_run=args.dry_run)
     if not args.skip_sirstrap:
         tag = resolve_sirstrap_tag()
-        info(f"Sirstrap release: {tag}")
+        info(f"\nSirstrap release: {tag}")
         install_sirstrap(target, tag, dry_run=args.dry_run)
-    if not args.skip_sirhurt:
+    if not args.skip_sirhurt and local_archive is None:
         link = resolve_sirhurt_link(args.link, dry_run=args.dry_run)
         if link is not None:
             if args.dry_run:
@@ -511,10 +843,12 @@ def run(args: argparse.Namespace) -> int:
                 info(f"  target: {target / 'sirhurt'}")
             else:
                 install_sirhurt(target, link)
+    if not args.skip_roblox_settings:
+        configure_roblox_settings(dry_run=args.dry_run)
     if args.dry_run:
         info("\ndry run: nothing was written")
     else:
-        summarize(target)
+        summarize(target, reboot_expected=not (args.skip_repair and args.skip_runtimes))
     return 0
 
 
