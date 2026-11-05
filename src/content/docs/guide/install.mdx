@@ -1,0 +1,129 @@
+---
+title: 3. Install SirHurt
+description: Download SirHurt and Sirstrap from their official sources, verify the archives are intact, and extract them into one folder.
+---
+
+import { Steps, Aside } from "@astrojs/starlight/components";
+
+This stage ends with two things inside the folder you made in stage 1: the **SirHurt** files and
+the **Sirstrap** launcher. Everything after this is running them, not downloading them.
+
+**Stage 3 of 4.**
+
+<Aside type="note" title="The two downloads">
+  **SirHurt** is the executor itself. It's what you run as Administrator in stage 4 and what
+  injects into Roblox. You need a SirHurt account to get the download link.
+
+  **Sirstrap** is an alternative Roblox launcher made by the same people. It's **optional** — you
+  can launch Roblox normally instead — but it's the supported way to launch a specific build, and
+  the SirHurt Cleaner ships in the same release. If you've installed SirHurt before, you need the
+  Cleaner from this download.
+</Aside>
+
+## Step 1 — Download and extract Sirstrap
+
+<Steps>
+
+1. Go to [sirstrap.com](https://sirstrap.com/) and download **`Sirstrap.UI.zip`**. That's the
+   GUI build; ignore `Sirstrap.CLI.zip` unless you specifically want the command-line one.
+
+2. Extract it with **7-Zip** or **WinRAR** into `<SirHurt folder>\sirstrap` — the same parent
+   folder you created in [stage 1](/guide/preparation/).
+
+3. Confirm you have `sirstrap\Sirstrap.exe` **and** a `sirstrap\bin\` folder next to it. The
+   archive has no wrapper folder, so if you extract it into a folder named `Sirstrap.UI` you'll
+   get the files one level too deep.
+
+4. Optional but recommended if this is a reinstall: grab **`SirHurt.Cleaner.CLI.zip`** from the
+   same release page and extract it into `<SirHurt folder>\cleaner`. You should end up with
+   `cleaner\SirHurtCleaner.exe`.
+
+</Steps>
+
+## Step 2 — Run the Cleaner if you've installed SirHurt before
+
+Skip this step entirely on a first install.
+
+<Steps>
+
+1. Make sure Roblox is fully closed — that was the whole of
+   [stage 2](/guide/roblox-settings/).
+
+2. Run `cleaner\SirHurtCleaner.exe` and press `Y` followed by `Enter` for **every** prompt.
+   Answering only some of them leaves the old files behind, which defeats the point.
+
+3. Let it finish, then confirm your SirHurt folder no longer holds leftover binaries.
+
+</Steps>
+
+<Aside type="danger" title="This clears your auth data">
+  The Cleaner removes SirHurt's stored authentication along with the old files, so you'll need to
+  log in again on your next injection. That's expected, not a sign that something broke.
+</Aside>
+
+## Step 3 — Get your SirHurt download link
+
+<Steps>
+
+1. Log in at [sirhurt.net](https://sirhurt.net/) with your SirHurt account.
+
+2. Open the download page — `sirhurt.net/login/download.php`. It hands you a single-use link,
+   which is one of two shapes:
+
+   - `https://gofile.io/d/XXXXXXXX` — a gofile.io folder.
+   - `https://app.box.com/s/XXXXXXXX` — a Box shared link.
+
+3. Copy the whole link. Don't open it in a browser and copy the address bar afterwards; gofile and
+   Box both rewrite their URLs once a download starts, and the rewritten form is not the link you
+   were given.
+
+</Steps>
+
+## Step 4 — Download and extract SirHurt
+
+<Steps>
+
+1. Open the link and download the archive. It's usually a `.zip`, but `.7z` and `.rar` are
+   possible — gofile in particular keeps whatever the uploader used.
+
+2. Extract it with **7-Zip** or **WinRAR** into `<SirHurt folder>\sirhurt`.
+
+3. Keep whatever top-level folder the archive already has. Don't flatten it into `sirhurt`
+   directly — the loader expects its neighbour folders (`bin`, `resources`, and so on) to be
+   together, and unpacking one level up breaks exactly that.
+
+4. Confirm the folder contains the SirHurt executable, then check that your antivirus exclusion
+   from [stage 1](/guide/preparation/) covers `<SirHurt folder>` — the new files are inside it, so
+   a correctly scoped exclusion already does.
+
+</Steps>
+
+<Aside type="caution" title="Do not use Windows' built-in extractor">
+  The built-in "Extract All" leaves the extracted DLLs marked as blocked, which is enough to stop
+  the loader from starting. This is the single most common cause of "it closes instantly" — always
+  7-Zip or WinRAR.
+</Aside>
+
+## Step 5 — Verify you're ready
+
+<Steps>
+
+1. `<SirHurt folder>\sirstrap\Sirstrap.exe` exists (or you've decided to launch Roblox normally
+   instead).
+
+2. `<SirHurt folder>\sirhurt\` contains the extracted SirHurt files, with the archive's own
+   folder structure intact.
+
+3. `<SirHurt folder>` itself is in your antivirus exclusions — the parent folder, so everything
+   inside it is covered.
+
+4. If this was a reinstall, the Cleaner ran to completion with `Y` + `Enter` on all prompts.
+
+5. Everything was extracted with 7-Zip or WinRAR, not Windows' built-in extractor.
+
+</Steps>
+
+**Next:** [4. Inject](/guide/injection/).
+
+If the loader won't start after this, [Troubleshooting](/guide/troubleshooting/) covers both the
+antivirus and the extraction problems this stage causes.

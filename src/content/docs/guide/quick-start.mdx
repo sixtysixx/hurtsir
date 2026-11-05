@@ -1,0 +1,41 @@
+---
+title: Start Here
+description: What this guide covers, what you need before you start, and which stage to open first.
+---
+
+import { Steps, Aside } from "@astrojs/starlight/components";
+
+This guide is one linear path, in four numbered stages. Each stage ends with a checklist and a
+link to the next one, so you always know where you are. Do them in order -almost every "it
+doesn't work" report comes from skipping ahead to stage 4.
+
+<Aside type="tip" title="Before you start">
+  - **Administrator access** on the machine.
+  - Roughly **2 GB** of free disk space.
+  - Windows **24H2 or newer** -run `winver` from the Start menu to confirm.
+  - **15-20 minutes**, plus any time the Windows repair in stage 1 takes.
+</Aside>
+
+<Steps>
+
+1. [Prepare Windows](/guide/preparation/) -exclude SirHurt from your antivirus, repair the
+   component store, install the missing runtimes, reboot.
+
+2. [Configure Roblox](/guide/roblox-settings/) -turn off **Launch on startup** and **Minimize to
+   tray when closed**, then fully close Roblox.
+
+3. [Install SirHurt](/guide/install/) -download SirHurt and Sirstrap, then extract them into one
+   folder with 7-Zip or WinRAR.
+
+4. [Inject](/guide/injection/) -launch Roblox and join a game, run the SirHurt loader as
+   Administrator, click **Inject** once, and confirm with a test script.
+
+</Steps>
+
+If a stage's checklist doesn't come out clean, stop there and fix it before moving on. When a
+stage fails and the checklist doesn't explain why:
+
+- [Troubleshooting](/guide/troubleshooting/) is a lookup, not a stage -five checks first, then the
+  symptom you're actually seeing.
+- [Version Mismatch & Downgrade](/guide/downgrade/) is the only page you need if SirHurt says
+  your Roblox version is unsupported.

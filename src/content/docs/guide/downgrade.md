@@ -1,10 +1,13 @@
 ---
-title: Downgrade Tutorial
-description: Download a specific Roblox version for compatibility with SirHurt.
+title: Version Mismatch & Downgrade
+description: Install the Roblox build SirHurt is currently patched for when the loader reports an unsupported version.
 ---
 
-:::Caution
-**Recommended Version (as of 10/18/2026):** [version-11f155f3450f4c8e  (latest, no need to downgrade unless youre on beta)](https://sirhurt.net/downgradetutorial.php?version=version-11f155f3450f4c8e )
+Only use this if SirHurt reports an unsupported version. On a working setup there is nothing to do
+here.
+
+:::caution
+**Recommended Version (as of 10/18/2026):** [version-11f155f3450f4c8e (latest, no need to downgrade unless youre on beta)](https://sirhurt.net/downgradetutorial.php?version=version-11f155f3450f4c8e)
 :::
 
 Need a specific build? Head to the [Downgrade Thingamabob 6000](/rdd/) to pull any Roblox deployment directly from Roblox's CDN.
@@ -12,3 +15,9 @@ Need a specific build? Head to the [Downgrade Thingamabob 6000](/rdd/) to pull a
 <br>
 
 <video controls src="https://r2.e-z.host/a466cf7c-0034-4d68-80d8-1c7ad54cf3c3/f9i7okia.mp4" title="awesome sauce video"></video>
+
+No video? It's three steps:
+
+1. Open the Downgrade Thingamabob 6000.
+2. Click **Download Previous Version**.
+3. Extract and launch that build, then inject.

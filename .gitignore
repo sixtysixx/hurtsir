@@ -29,3 +29,6 @@ bun.lock
 .arive
 .cache
 .wrangler/
+
+# Nuitka build output
+tools/sirhurt-setup/build/

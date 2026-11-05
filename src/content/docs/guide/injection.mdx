@@ -1,40 +1,42 @@
 ---
-title: Execution & Injection
-description: Launch Roblox, run the bootstrapper as Administrator, and inject SirHurt without the classic mistakes.
+title: 4. Inject
+description: Launch Roblox, run the SirHurt loader as Administrator, and inject without the classic mistakes.
 ---
 
 import { Steps, Aside } from "@astrojs/starlight/components";
 
 Injection is the step where order and timing matter most. Roblox has to be up and fully loaded
-before the bootstrapper can attach, and the bootstrapper has to run with elevation or it won't
-be able to touch the client.
+before the loader can attach, and the loader has to run with elevation or it won't be able to touch
+the client.
 
-Work through [Preparation & Prerequisites](/guide/preparation/) and
-[Roblox Settings](/guide/roblox-settings/) first -most "injection failed" reports trace back to
-something on one of those two pages.
+**Stage 4 of 4.**
 
-## Step 1 - Launch Roblox and join a game
+In this guide, **the loader** means the SirHurt app you extracted in [stage 3](/guide/install/) —
+the window with **Inject** and **Kill Processes**. **Sirstrap** always means the separate Roblox
+launcher, never the loader.
+
+## Step 1 — Launch Roblox and join a game
 
 <Steps>
 
-1. Launch Roblox **first**, before the bootstrapper.
+1. Launch Roblox **first**, before the loader.
 
-2. Join any game. You can't inject from the Roblox home screen -there needs to be a live game
+2. Join any game. You can't inject from the Roblox home screen — there needs to be a live game
    client to attach to.
 
-3. Let the game finish loading. If you inject while the loading screen is still up, the injector
-   can attach to a client that isn't ready yet.
+3. Let the game finish loading. If you inject while the loading screen is still up, the loader can
+   attach to a client that isn't ready yet.
 
 4. Leave Roblox in the foreground for the next step rather than minimising it.
 
 </Steps>
 
 <Aside type="tip">
-  Picking a small, private or empty game makes this much easier -there's less
+  Picking a small, private or empty game makes this much easier — there's less
   going on during startup, so "the game has finished loading" is unambiguous.
 </Aside>
 
-## Step 2 - Wait before injecting
+## Step 2 — Wait before injecting
 
 <Steps>
 
@@ -47,39 +49,45 @@ something on one of those two pages.
 
 </Steps>
 
-## Step 3 - Run the bootstrapper as Administrator
+## Step 3 — Run the SirHurt loader as Administrator
 
 <Steps>
 
-1. Locate the SirHurt Bootstrapper in the folder you set up during
-   [Preparation](/guide/preparation/).
+1. Open `<SirHurt folder>\sirhurt` — the folder you extracted in [stage 3](/guide/install/) — and
+   locate the SirHurt loader.
 
-2. Right-click it and choose **Run as administrator**. Don't just double-click it -without
+2. Right-click it and choose **Run as administrator**. Don't just double-click it — without
    elevation it can't attach to Roblox or write to the Roblox directory.
 
 3. Approve the Windows UAC prompt.
 
 4. If your antivirus pops up with a warning at this point, something in step 2 of
-   [Preparation](/guide/preparation/) didn't stick. Fix the exclusions before going further.
+   [stage 1](/guide/preparation/) didn't stick. Fix the exclusions before going further.
 
 </Steps>
 
-## Step 4 - Confirm the bootstrapper sees Roblox
+<Aside type="tip" title="If you're using Sirstrap">
+  Start Roblox **from Sirstrap** instead of the Roblox app, join a game, then run the SirHurt
+  loader as Administrator. Sirstrap launches Roblox; it doesn't inject anything, so the rest of
+  this stage is unchanged.
+</Aside>
+
+## Step 4 — Confirm the loader sees Roblox
 
 <Steps>
 
-1. Leave the bootstrapper window open and let it settle.
+1. Leave the loader window open and let it settle.
 
 2. It should report that it has located the running Roblox client. Wait for that status rather
    than clicking straight away.
 
 3. If it sits at "waiting" or never detects Roblox, stop here and check
-   [Troubleshooting](/guide/troubleshooting/) -injecting from that state is what produces
+   [Troubleshooting](/guide/troubleshooting/) — injecting from that state is what produces
    "nothing happened".
 
 </Steps>
 
-## Step 5 - Inject
+## Step 5 — Inject
 
 <Steps>
 
@@ -92,13 +100,13 @@ something on one of those two pages.
 </Steps>
 
 <Aside type="danger" title="Do NOT click Inject a second time">
-  Once you've logged in, the bootstrapper finishes the injection on its own.
+  Once you've logged in, the loader finishes the injection on its own.
   Clicking **Inject** again afterwards is one of the most common causes of a
   failed or half-finished injection, and it can leave you needing to restart
   Roblox before it works again.
 </Aside>
 
-## Step 6 - Confirm it actually works
+## Step 6 — Confirm it actually works
 
 Don't judge the injection by whether the UI looks right.
 
@@ -109,35 +117,35 @@ Don't judge the injection by whether the UI looks right.
 2. Execute it and watch for its console or on-screen output.
 
 3. A script that runs confirms the injector is live. If it doesn't run, the problem is in the
-   injection rather than the script -see [Troubleshooting](/guide/troubleshooting/).
+   injection rather than the script — see [Troubleshooting](/guide/troubleshooting/).
 
 4. Only test your real scripts once the injector is confirmed working, so you're not debugging
    two things at once.
 
 </Steps>
 
+That's the whole path. If it worked, you're done; if not,
+[Troubleshooting](/guide/troubleshooting/).
+
 ## If it fails
 
 <Steps>
 
-1. Confirm the Roblox settings are still off. Roblox can reset them after an update.
+1. Fully close Roblox, including any tray process, then start again from step 1.
 
-2. Fully close Roblox, including any tray process, then start again from step 1.
+2. If the loader hangs or closes instantly, use the **Kill Processes** button in the UI and retry.
 
-3. If the bootstrapper hangs or closes instantly, use the **Kill Processes** button in the UI
-   and retry.
+3. Work the matching symptom on the [Troubleshooting](/guide/troubleshooting/) page instead of
+   guessing — each one is a numbered walkthrough.
 
-4. Work the matching symptom on the [Troubleshooting](/guide/troubleshooting/) page instead of
-   guessing -each one is a numbered walkthrough.
-
-5. If you're told you're on an unsupported version, that's a Roblox update, not a broken setup.
-   See the [Downgrade Tutorial](/guide/downgrade/).
+4. If you're told you're on an unsupported version, that's a Roblox update, not a broken setup.
+   See [Version Mismatch & Downgrade](/guide/downgrade/).
 
 </Steps>
 
 <Aside type="tip" title="Still stuck?">
   Collect your Windows version (`winver`), the Roblox build hash and the full
-  bootstrapper log, then post them in our [Discord](https://discord.gg/sirhurt).
+  loader log, then post them in our [Discord](https://discord.gg/sirhurt).
   Those three details turn "it doesn't work" into something that can actually be
   diagnosed.
 </Aside>

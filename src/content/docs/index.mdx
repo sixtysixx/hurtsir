@@ -1,12 +1,12 @@
 ---
 title: SirHurt Troubleshooting Guide
-description: A comprehensive, step-by-step guide for setting up and troubleshooting SirHurt on Roblox.
+description: A linear, step-by-step path from a fresh Windows install to a working SirHurt injector on Roblox.
 template: splash
 hero:
-  tagline: A comprehensive, step-by-step guide for setting up and troubleshooting SirHurt on Roblox.
+  tagline: One linear path from a fresh Windows install to a working injector.
   actions:
-    - text: Setting up & Troubleshooting
-      link: /guide/preparation/
+    - text: Start here
+      link: /guide/quick-start/
       icon: right-arrow
     - text: Downgrade Thingamabob 6000
       link: /rdd/
@@ -18,33 +18,38 @@ import { LinkCard, CardGrid } from "@astrojs/starlight/components";
 
 <CardGrid>
   <LinkCard
-    title="Preparation"
-    description="Disable antivirus, install prerequisites, and configure your system for SirHurt."
+    title="Start Here"
+    description="What the guide covers, what you need, and which stage to open first."
+    href="/guide/quick-start/"
+  />
+  <LinkCard
+    title="1. Prepare Windows"
+    description="Antivirus exclusions, system file repair, and the runtimes SirHurt needs."
     href="/guide/preparation/"
   />
   <LinkCard
-    title="Roblox Settings"
-    description="Configure Roblox settings to prevent conflicts with the bootstrapper."
+    title="2. Configure Roblox"
+    description="Turn off the two Roblox settings that break injection, then close it fully."
     href="/guide/roblox-settings/"
   />
   <LinkCard
-    title="Execution & Injection"
-    description="Launch Roblox, run the bootstrapper as admin, and inject SirHurt."
+    title="3. Install SirHurt"
+    description="Download SirHurt and Sirstrap, verify the archives, and extract them correctly."
+    href="/guide/install/"
+  />
+  <LinkCard
+    title="4. Inject"
+    description="Launch Roblox, run the loader as admin, and inject without the classic mistakes."
     href="/guide/injection/"
   />
   <LinkCard
     title="Troubleshooting"
-    description="Fix common issues like injection failures and version errors."
+    description="Five checks first, then a numbered walkthrough for each symptom."
     href="/guide/troubleshooting/"
   />
   <LinkCard
-    title="Downgrade Tutorial"
-    description="Download specific Roblox versions for compatibility with SirHurt."
+    title="Version Mismatch & Downgrade"
+    description="Install the Roblox build SirHurt is currently patched for."
     href="/guide/downgrade/"
-  />
-  <LinkCard
-    title="Downgrade Thingamabob 6000"
-    description="Grab any Roblox deployment straight from Roblox's CDN."
-    href="/rdd/"
   />
 </CardGrid>
