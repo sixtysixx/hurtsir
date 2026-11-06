@@ -3,9 +3,10 @@
 
 Automates stages 1-3 of https://sirhurt.pages.dev/guide/:
 
-* scans the folder this script lives in for a SirHurt archive, moves it into the
-  install folder (validated to be outside OneDrive and Program Files), adds a
-  Windows Defender exclusion for that folder, then extracts the archive;
+* scans the folder you started it from and the folder the exe lives in for a
+  SirHurt archive, moves it into the install folder (validated to be outside
+  OneDrive and Program Files), adds a Windows Defender exclusion for that
+  folder, then extracts the archive;
 * runs the system-repair chain (SFC, then DISM CheckHealth/ScanHealth/RestoreHealth);
 * installs both Visual C++ redistributables and the .NET Framework 4.8.1 web
   installer;
@@ -15,9 +16,13 @@ Automates stages 1-3 of https://sirhurt.pages.dev/guide/:
 * turns off "Launch at startup" and "Minimize to tray when closed" in Roblox's
   %LOCALAPPDATA%\\Roblox\\LocalStorage\\appStorage.json.
 
+The install folder defaults to SirHurt inside Downloads, then Desktop, then
+Documents - the first one Windows reports as not synced to OneDrive - so it is
+easy to find. When the script isn't already elevated it re-launches itself
+through the UAC prompt before doing anything.
+
 Only the public download link is handled - no credentials are read or stored.
-Requires Python 3.10+, Administrator for the exclusion/repair stages, and builds
-with Nuitka (see build.ps1 next to this file).
+Requires Python 3.10+ and builds with Nuitka (see build.ps1 next to this file).
 """
 
 from __future__ import annotations
@@ -36,6 +41,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 import webbrowser
 import zipfile
 from pathlib import Path
@@ -67,6 +73,19 @@ REPAIR_CHAIN = (
 )
 ROBLOX_STORAGE_PARTS = ("Roblox", "LocalStorage", "appStorage.json")
 ROBLOX_SETTINGS = {"LaunchAtStartup": "false", "MinimizeToTray": "false"}
+# Install-folder parents, in order of preference. Resolved through the shell so
+# a OneDrive folder-redirect is visible rather than guessed at.
+FOLDERID_DOWNLOADS = "{374DE290-123F-4565-9164-39C4925E467B}"
+FOLDERID_DESKTOP = "{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}"
+FOLDERID_DOCUMENTS = "{FDD39AD0-238F-46AF-ADB4-6C85480369C7}"
+PREFERRED_INSTALL_PARENTS = (FOLDERID_DOWNLOADS, FOLDERID_DESKTOP, FOLDERID_DOCUMENTS)
+PARENT_FALLBACK_NAMES = {
+    FOLDERID_DOWNLOADS: "Downloads",
+    FOLDERID_DESKTOP: "Desktop",
+    FOLDERID_DOCUMENTS: "Documents",
+}
+ONEDRIVE_ENV_VARS = ("OneDrive", "OneDriveConsumer", "OneDriveCommercial")
+INSTALL_FOLDER_NAME = "SirHurt"
 GOFILE_RE = re.compile(r"^https?://(?:www\.)?gofile\.io/d/([A-Za-z0-9]{6,})$", re.I)
 BOX_RE = re.compile(r"^https?://(?:www\.)?app\.box\.com/s/([A-Za-z0-9]{8,})$", re.I)
 ARCHIVE_SUFFIXES = (".zip", ".7z", ".rar")
@@ -225,8 +244,8 @@ def preflight() -> None:
         raise SetupError("this script only runs on Windows")
     if not is_admin():
         warn(
-            "not running as Administrator - downloading and extracting works, but the SirHurt "
-            "loader itself has to run elevated (stage 4 of the guide)"
+            "not running as Administrator - the exclusion, SFC and DISM stages will refuse "
+            "to run until you elevate"
         )
     build = windows_build()
     if build is not None and build < WINDOWS_24H2_BUILD:
@@ -241,6 +260,86 @@ def require_admin(reason: str) -> None:
         raise SetupError(
             f"run this script as Administrator to {reason} (or skip that stage)"
         )
+
+
+def elevate(argv: list[str]) -> bool:
+    """Relaunch this script/exe elevated through UAC; True when that copy started."""
+    if getattr(sys, "frozen", False):
+        arguments = list(argv)
+    else:
+        arguments = [str(Path(__file__).resolve()), *argv]
+    parameters = subprocess.list2cmdline([*arguments, "--elevated"])
+    try:
+        shell_execute = ctypes.windll.shell32.ShellExecuteW  # type: ignore[attr-defined]
+        result = shell_execute(None, "runas", sys.executable, parameters, str(Path.cwd()), 1)
+    except (AttributeError, OSError) as exc:
+        warn(f"cannot request Administrator rights: {exc}")
+        return False
+    if result <= 32:
+        warn("the Administrator request was refused (UAC prompt declined)")
+        return False
+    return True
+
+
+def should_elevate(argv: list[str]) -> bool:
+    if not sys.platform.startswith("win") or is_admin() or "--elevated" in argv:
+        return False
+    # Help, version and dry runs write nothing, so they don't need the prompt.
+    return not any(flag in argv for flag in ("-h", "--help", "--version", "--dry-run"))
+
+
+class _GUID(ctypes.Structure):
+    _fields_ = (
+        ("Data1", ctypes.c_uint32),
+        ("Data2", ctypes.c_uint16),
+        ("Data3", ctypes.c_uint16),
+        ("Data4", ctypes.c_ubyte * 8),
+    )
+
+
+def known_folder(folder_id: str) -> Path | None:
+    """Resolve a shell KNOWNFOLDERID, so OneDrive redirections show up as-is."""
+    if not sys.platform.startswith("win"):
+        return None
+    try:
+        guid = _GUID.from_buffer_copy(uuid.UUID(folder_id).bytes_le)
+        path = ctypes.c_wchar_p()
+        result = ctypes.windll.shell32.SHGetKnownFolderPath(  # type: ignore[attr-defined]
+            ctypes.byref(guid), 0, None, ctypes.byref(path)
+        )
+    except (AttributeError, OSError, ValueError):
+        return None
+    if result != 0 or not path.value:
+        return None
+    try:
+        return Path(path.value)
+    finally:
+        ctypes.windll.ole32.CoTaskMemFree(ctypes.cast(path, ctypes.c_void_p))  # type: ignore[attr-defined]
+
+
+def is_onedrive_path(candidate: Path) -> bool:
+    cased = os.path.normcase(os.path.abspath(candidate))
+    roots = [Path.home() / "OneDrive"]
+    for key in ONEDRIVE_ENV_VARS:
+        value = os.environ.get(key)
+        if value:
+            roots.append(Path(value))
+    for root in roots:
+        root_cased = os.path.normcase(os.path.abspath(root))
+        if cased == root_cased or cased.startswith(root_cased + os.sep):
+            return True
+    return any(part.lower().startswith("onedrive") for part in candidate.parts)
+
+
+def default_target() -> Path:
+    """SirHurt under Downloads, Desktop or Documents - whichever isn't OneDrive."""
+    for folder_id in PREFERRED_INSTALL_PARENTS:
+        parent = known_folder(folder_id) or (Path.home() / PARENT_FALLBACK_NAMES[folder_id])
+        if is_onedrive_path(parent):
+            warn(f"skipping {parent} - it is synced to OneDrive")
+            continue
+        return parent / INSTALL_FOLDER_NAME
+    return Path.home() / INSTALL_FOLDER_NAME
 
 
 def protected_roots() -> list[Path]:
@@ -258,9 +357,8 @@ def protected_roots() -> list[Path]:
 def validate_target(target: Path) -> None:
     candidate = Path(os.path.abspath(target.expanduser()))
     cased = os.path.normcase(str(candidate))
-    for part in candidate.parts:
-        if part.lower().startswith("onedrive"):
-            raise SetupError(f"refusing to install into a OneDrive-synced folder: {candidate}")
+    if is_onedrive_path(candidate):
+        raise SetupError(f"refusing to install into a OneDrive-synced folder: {candidate}")
     for root in protected_roots():
         root_cased = os.path.normcase(os.path.abspath(root))
         if cased == root_cased or cased.startswith(root_cased + os.sep):
@@ -268,20 +366,19 @@ def validate_target(target: Path) -> None:
 
 
 def resolve_target(raw: str | None, *, dry_run: bool) -> Path:
-    default = Path.home() / "SirHurt"
     if raw:
         target = Path(raw).expanduser()
-    elif dry_run:
-        target = default
     else:
-        answer = input(f"Where should SirHurt live? [default: {default}]: ").strip().strip('"')
-        target = Path(answer).expanduser() if answer else default
+        default = default_target()
+        if dry_run:
+            target = default
+        else:
+            answer = input(f"Where should SirHurt live? [default: {default}]: ").strip().strip('"')
+            target = Path(answer).expanduser() if answer else default
     validate_target(target)
-    if dry_run:
-        info(f"target folder: {target}")
-    else:
+    if not dry_run:
         target.mkdir(parents=True, exist_ok=True)
-        info(f"target folder: {target}")
+    info(f"target folder: {target}")
     return target
 
 
@@ -290,30 +387,70 @@ def resolve_target(raw: str | None, *, dry_run: bool) -> Path:
 # --------------------------------------------------------------------------- #
 
 
-def script_directory() -> Path:
-    """The folder this script (or the Nuitka onefile exe) was launched from."""
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent
+def is_compiled() -> bool:
+    return "__compiled__" in globals() or bool(getattr(sys, "frozen", False))
 
 
-def find_local_archive(folder: Path) -> Path | None:
-    """Newest archive in folder whose name mentions SirHurt, if there is one."""
+def is_unpack_folder(folder: Path) -> bool:
+    """True for Nuitka/PyInstaller onefile scratch dirs under %TEMP%."""
     try:
-        entries = list(folder.iterdir())
-    except OSError as exc:
-        warn(f"cannot scan {folder}: {exc}")
-        return None
-    found: list[tuple[float, Path]] = []
-    for entry in entries:
-        if not entry.is_file() or entry.suffix.lower() not in ARCHIVE_SUFFIXES:
+        cased = os.path.normcase(os.path.abspath(folder))
+        temp = os.path.normcase(os.path.abspath(tempfile.gettempdir()))
+    except OSError:
+        return False
+    if cased == temp or cased.startswith(temp + os.sep):
+        return True
+    return any(part.lower().startswith(("onefile_", "_mei")) for part in folder.parts)
+
+
+def script_directory() -> Path:
+    """Where the exe (or script) really lives - onefile extracts itself to %TEMP%."""
+    if not is_compiled():
+        return Path(__file__).resolve().parent
+    candidates = (os.environ.get("NUITKA_ONEFILE_BINARY"), sys.argv[0], sys.executable)
+    for candidate in candidates:
+        if not candidate:
             continue
-        if "sirhurt" not in entry.name.lower():
-            continue
+        path = Path(candidate).expanduser()
         try:
-            found.append((entry.stat().st_mtime, entry))
+            if path.is_file() and not is_unpack_folder(path.parent):
+                return path.resolve().parent
         except OSError:
             continue
+    return Path.cwd()
+
+
+def search_directories() -> list[Path]:
+    """Folders to look for the archive in: where you are, then where the exe is."""
+    folders: list[Path] = []
+    for folder in (Path.cwd(), script_directory()):
+        try:
+            resolved = folder.resolve()
+        except OSError:
+            continue
+        if resolved not in folders:
+            folders.append(resolved)
+    return folders
+
+
+def find_local_archive(folders: list[Path]) -> Path | None:
+    """Newest archive in any of folders whose name mentions SirHurt."""
+    found: list[tuple[float, Path]] = []
+    for folder in folders:
+        try:
+            entries = list(folder.iterdir())
+        except OSError as exc:
+            warn(f"cannot scan {folder}: {exc}")
+            continue
+        for entry in entries:
+            if not entry.is_file() or entry.suffix.lower() not in ARCHIVE_SUFFIXES:
+                continue
+            if "sirhurt" not in entry.name.lower():
+                continue
+            try:
+                found.append((entry.stat().st_mtime, entry))
+            except OSError:
+                continue
     if not found:
         return None
     found.sort(key=lambda item: item[0], reverse=True)
@@ -586,9 +723,22 @@ def gofile_download(folder_id: str, downloads: Path) -> Path:
     return destination
 
 
+def download_scan_folders() -> list[Path]:
+    """Where a browser might have saved the archive, honouring folder redirection."""
+    folders: list[Path] = []
+    for folder_id, fallback in (
+        (FOLDERID_DOWNLOADS, "Downloads"),
+        (FOLDERID_DESKTOP, "Desktop"),
+    ):
+        resolved = known_folder(folder_id) or (Path.home() / fallback)
+        if resolved not in folders:
+            folders.append(resolved)
+    return folders
+
+
 def newest_archive(started: float) -> Path | None:
     found: list[tuple[float, Path]] = []
-    for folder in (Path.home() / "Downloads", Path.home() / "Desktop"):
+    for folder in download_scan_folders():
         if not folder.is_dir():
             continue
         try:
@@ -605,7 +755,7 @@ def newest_archive(started: float) -> Path | None:
             if modified + 1 < started:
                 continue
             found.append((modified, entry))
-    return max(found)[1] if found else None
+    return max(found, key=lambda item: item[0])[1] if found else None
 
 
 def browser_handoff(url: str, downloads: Path, reason: str) -> Path:
@@ -752,8 +902,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--dir",
         metavar="PATH",
-        default=str(Path.home() / "SirHurt"),
-        help="install folder (default: %(default)s)",
+        help=(
+            "install folder (default: SirHurt under Downloads, Desktop or Documents - "
+            "whichever isn't synced to OneDrive)"
+        ),
     )
     parser.add_argument("--link", metavar="URL", help="SirHurt download link (gofile.io or app.box.com)")
     parser.add_argument(
@@ -782,6 +934,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--dry-run", action="store_true", help="resolve everything and print it, write nothing")
     parser.add_argument("--version", action="version", version=f"SirHurt Setup {__version__}")
+    parser.add_argument("--elevated", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
 
@@ -817,9 +970,16 @@ def run(args: argparse.Namespace) -> int:
             if not local_archive.is_file():
                 raise SetupError(f"no such archive: {local_archive}")
         elif not args.no_local_archive:
-            local_archive = find_local_archive(script_directory())
+            folders = search_directories()
+            local_archive = find_local_archive(folders)
             if local_archive is None:
-                info(f"\n[SirHurt] no SirHurt archive in {script_directory()}")
+                searched = " or ".join(str(folder) for folder in folders)
+                warn(f"no SirHurt archive found in {searched}")
+                info(
+                    "  Download the archive from https://sirhurt.net/login/download.php and put\n"
+                    f"  it next to the setup executable ({folders[-1]}), then run this again.\n"
+                    "  You can paste the download link instead if you prefer."
+                )
 
     if not args.skip_exclusions:
         add_defender_exclusion(target, dry_run=args.dry_run)
@@ -853,7 +1013,18 @@ def run(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv)
+    raw = list(sys.argv[1:] if argv is None else argv)
+    if should_elevate(raw):
+        if elevate(raw):
+            print("relaunching as Administrator ...", file=sys.stderr)
+            return 0
+        print(
+            "error: this setup needs Administrator rights - accept the UAC prompt, or run it "
+            "from an elevated prompt",
+            file=sys.stderr,
+        )
+        return 1
+    args = parse_args(raw)
     try:
         return run(args)
     except KeyboardInterrupt:
