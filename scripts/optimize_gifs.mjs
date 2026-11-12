@@ -1,13 +1,11 @@
 // Converts every GIF under the gallery folders into the animated WebP the site
 // actually serves, then writes the legacy-URL redirect map.
 //
-//   public/gifz/<name>.gif                 ->  public/gifz/<name>.webp
-//   public/gifz/sub/<name>.gif             ->  public/gifz/sub/<name>.webp
-//   public/superdupersecretgifs/<name>.gif ->  public/superdupersecretgifs/<name>.webp
-//   (sources removed; same rule for both folders)
+//   public/gifz/<name>.gif     ->  public/gifz/<name>.webp
+//   public/gifz/sub/<name>.gif ->  public/gifz/sub/<name>.webp
+//   (sources removed)
 //
 //   public/_redirects  ->  /gifz/<name>.gif  /gifz/<name>.webp  301
-//                          /superdupersecretgifs/<name>.gif  /superdupersecretgifs/<name>.webp  301
 //
 // The WebP averages ~0.49 MB against ~3.3 MB for the source GIF (17x smaller).
 // That matters twice over: public/ is uploaded as-is on every deploy, and the
@@ -21,16 +19,8 @@ import { readdirSync, readFileSync, writeFileSync, statSync, mkdirSync, rmSync }
 import { dirname, join, relative, sep } from 'node:path';
 import sharp from 'sharp';
 
-// One entry per gallery. Order matters only in that the /gifz rules stay first
-// in public/_redirects.
-const TARGETS = [
-  { src: 'public/gifz', base: '/gifz', manifest: '.cache/gifz-webp.json' },
-  {
-    src: 'public/superdupersecretgifs',
-    base: '/superdupersecretgifs',
-    manifest: '.cache/secretgifs-webp.json',
-  },
-];
+// One entry per gallery; the /gifz rules come first in public/_redirects.
+const TARGETS = [{ src: 'public/gifz', base: '/gifz', manifest: '.cache/gifz-webp.json' }];
 const REDIRECTS = 'public/_redirects';
 const MAX_EDGE = 480;
 const QUALITY = 70;

@@ -16,11 +16,6 @@
 /gifz/*.webp
   Cache-Control: public, max-age=31536000, immutable
 
-# Secret animated WebP gallery. Same rule as /gifz: names are treated as
-# immutable and a re-scrape writes a new file name.
-/superdupersecretgifs/*.webp
-  Cache-Control: public, max-age=31536000, immutable
-
 /pagefind/*
   Cache-Control: public, max-age=86400
 

@@ -64,8 +64,6 @@ export default defineConfig({
         { label: "gifs", link: "/gifz/" },
       ],
     }),
-    sitemap({
-      filter: (url) => !url.includes('/secretgifs'),
-    }),
+    sitemap(),
   ],
 });
