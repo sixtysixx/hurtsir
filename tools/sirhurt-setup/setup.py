@@ -6,15 +6,25 @@ Automates stages 1-3 of https://sirhurt.pages.dev/guide/:
 * scans the folder you started it from and the folder the exe lives in for a
   SirHurt archive, moves it into the install folder (validated to be outside
   OneDrive and Program Files), adds a Windows Defender exclusion for that
-  folder, then extracts the archive;
+  folder, then extracts the archive - a gofile download is the SirHurt folder
+  itself while a Box share wraps it in another zip, which is unpacked too;
 * runs the system-repair chain (SFC, then DISM CheckHealth/ScanHealth/RestoreHealth);
 * installs both Visual C++ redistributables and the .NET Framework 4.8.1 web
   installer;
-* downloads Sirstrap's UI, Cleaner and CLI builds from their own releases;
+* downloads Sirstrap's UI, Cleaner and CLI builds from their own releases, and can
+  run the Cleaner from the same pass (`--run-cleaner`), answering `y` to every prompt
+  so old Roblox/SirHurt files and stored login data are gone before the install;
 * otherwise SirHurt needs the single-use link you get from sirhurt.net after
   logging in - a gofile.io folder or a Box share;
 * turns off "Launch at startup" and "Minimize to tray when closed" in Roblox's
   %LOCALAPPDATA%\\Roblox\\LocalStorage\\appStorage.json.
+
+Started with no switches from a console it first asks six yes/no questions (repair,
+exclusion, Sirstrap, Cleaner, Roblox settings, reboot) and prints the resulting plan;
+`--no-survey` keeps the defaults and any stage switch skips the questions. When the
+SirHurt archive isn't found it offers a rescan loop instead of giving up, and the
+end of a run writes `<install folder>\\README.txt` with the next steps before it
+optionally schedules a 60-second reboot.
 
 The install folder defaults to SirHurt inside Downloads, then Desktop, then
 Documents - the first one Windows reports as not synced to OneDrive - so it is
@@ -51,7 +61,12 @@ __version__ = "1.1.0"
 SIRSTRAP_RELEASES_API = "https://codeberg.org/api/v1/repos/Sirstrap/Sirstrap/releases?limit=20"
 SIRSTRAP_DOWNLOAD_BASE = "https://sirstrap.com/releases"
 SIRSTRAP_FALLBACK_TAG = "v10.12.7.4-beta"
-SIRSTRAP_ASSETS = (("Sirstrap.UI.zip", "sirstrap"), ("SirHurt.Cleaner.CLI.zip", "cleaner"))
+SIRSTRAP_CLEANER_ASSET = "SirHurt.Cleaner.CLI.zip"
+SIRSTRAP_CLEANER_FOLDER = "cleaner"
+SIRSTRAP_ASSETS = (
+    ("Sirstrap.UI.zip", "sirstrap"),
+    (SIRSTRAP_CLEANER_ASSET, SIRSTRAP_CLEANER_FOLDER),
+)
 SIRSTRAP_CLI_URL = "https://www.sirstrap.com/releases/download.php?file=Sirstrap.CLI.zip"
 SIRSTRAP_CLI_ASSET = "Sirstrap.CLI.zip"
 SIRSTRAP_CLI_FOLDER = "sirstrap-cli"
@@ -383,6 +398,97 @@ def resolve_target(raw: str | None, *, dry_run: bool) -> Path:
 
 
 # --------------------------------------------------------------------------- #
+# Survey
+# --------------------------------------------------------------------------- #
+
+SURVEY_QUESTIONS = (
+    ("repair", "do you want to run system corruption scans?", False),
+    ("exclusions", "do you want to add an exclusion for the sirhurt folder?", True),
+    ("sirstrap", "do you want to use sirstrap to avoid version mismatches?", True),
+    (
+        "cleaner",
+        "do you want to download and clean current sirhurt configuration(s) via sirhurt cleaner?",
+        True,
+    ),
+    (
+        "roblox_settings",
+        "do you want to turn off launch at start and minimize to tray to avoid possible injection issues?",
+        True,
+    ),
+    ("reboot", "do you want to automatically reboot your PC?", False),
+)
+SURVEY_OPTOUT_FLAGS = frozenset({
+    "--skip-sirstrap",
+    "--skip-sirhurt",
+    "--skip-exclusions",
+    "--skip-repair",
+    "--skip-runtimes",
+    "--skip-roblox-settings",
+    "--run-cleaner",
+    "--reboot",
+    "--no-survey",
+    "--dry-run",
+})
+
+
+def has_stage_flag(argv: list[str]) -> bool:
+    """True when argv already chooses stages, so the survey must not run."""
+    return any(argument.split("=", 1)[0] in SURVEY_OPTOUT_FLAGS for argument in argv)
+
+
+def should_survey(argv: list[str]) -> bool:
+    return not has_stage_flag(argv) and sys.stdin is not None and sys.stdin.isatty()
+
+
+def ask_yes_no(question: str, default: bool) -> bool:
+    suffix = "Y/n" if default else "y/N"
+    while True:
+        try:
+            raw = input(f"{question} {suffix}: ").strip().lower()
+        except EOFError:
+            return default
+        if not raw:
+            return default
+        if raw in ("y", "yes"):
+            return True
+        if raw in ("n", "no"):
+            return False
+        info("  please answer y or n")
+
+
+def apply_survey(args: argparse.Namespace) -> None:
+    info("\nAnswer six questions to pick the stages (--help lists every switch).")
+    answers = {key: ask_yes_no(question, default) for key, question, default in SURVEY_QUESTIONS}
+    args.skip_repair = not answers["repair"]
+    args.skip_exclusions = not answers["exclusions"]
+    args.skip_sirstrap = not answers["sirstrap"]
+    args.skip_roblox_settings = not answers["roblox_settings"]
+    args.run_cleaner = answers["cleaner"]
+    args.reboot = answers["reboot"]
+
+
+def survey_plan(args: argparse.Namespace) -> str:
+    stages = []
+    if not args.skip_exclusions:
+        stages.append("exclusion")
+    if not args.skip_repair:
+        stages.append("repair")
+    if not args.skip_runtimes:
+        stages.append("runtimes")
+    if not args.skip_sirstrap:
+        stages.append("sirstrap")
+    if args.run_cleaner:
+        stages.append("cleaner")
+    if not args.skip_sirhurt:
+        stages.append("sirhurt")
+    if not args.skip_roblox_settings:
+        stages.append("roblox settings")
+    if args.reboot:
+        stages.append("reboot")
+    return ", ".join(stages) or "nothing"
+
+
+# --------------------------------------------------------------------------- #
 # Local SirHurt archive, Defender exclusion, repair, runtimes
 # --------------------------------------------------------------------------- #
 
@@ -457,6 +563,42 @@ def find_local_archive(folders: list[Path]) -> Path | None:
     for _, extra in found[1:]:
         info(f"  ignoring {extra.name} (using the newest archive, {found[0][1].name})")
     return found[0][1]
+
+
+def prompt_for_archive(folders: list[Path]) -> Path | None:
+    """Ask for the SirHurt archive; Enter rescans, 's' skips SirHurt."""
+    info("\nSirHurt isn't detected in the current folder or next to the executable.")
+    info(f"  looked in: {', '.join(str(folder) for folder in folders)}")
+    info("  move it to the same folder as the executable, or paste the direct path.")
+    info("  download it from https://sirhurt.net/login/download.php if you don't have it yet.")
+    while True:
+        try:
+            raw = input("archive path (Enter = look again, 's' = skip SirHurt): ").strip()
+        except EOFError:
+            return None
+        if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in "\"'":
+            raw = raw[1:-1].strip()
+        if not raw:
+            found = find_local_archive(folders)
+            if found is not None:
+                info(f"  found {found}")
+                return found
+            info(f"  still nothing in {', '.join(str(folder) for folder in folders)}")
+            continue
+        if raw.lower() in ("s", "skip"):
+            info("  skipping SirHurt - everything else still runs")
+            return None
+        candidate = Path(raw).expanduser()
+        if candidate.is_dir():
+            found = find_local_archive([candidate])
+            if found is not None:
+                info(f"  found {found}")
+                return found
+            info(f"  no SirHurt .zip/.7z/.rar in {candidate}")
+            continue
+        if candidate.is_file():
+            return candidate
+        info(f"  not a file: {candidate}")
 
 
 def adopt_local_archive(archive: Path, target: Path, *, dry_run: bool) -> None:
@@ -614,6 +756,24 @@ def resolve_sirstrap_tag() -> str:
     return SIRSTRAP_FALLBACK_TAG
 
 
+def download_sirstrap_asset(url: str, asset: str, destination: Path, *, dry_run: bool) -> None:
+    info(f"\n[Sirstrap] {asset}")
+    info(f"  url:    {url}")
+    info(f"  target: {destination}")
+    if dry_run:
+        return
+    with tempfile.TemporaryDirectory(prefix="sirhurt-setup-") as scratch:
+        archive = Path(scratch) / asset
+        download(url, archive)
+        if not zipfile.is_zipfile(archive):
+            raise SetupError(
+                f"{asset} did not download as a zip archive - the release layout may have changed"
+            )
+        safe_extract_zip(archive, destination)
+    executables = sorted(path.name for path in destination.rglob("*.exe"))
+    info(f"  extracted: {', '.join(executables) if executables else '(no .exe found)'}")
+
+
 def install_sirstrap(target: Path, tag: str, *, dry_run: bool) -> None:
     jobs = [
         (f"{SIRSTRAP_DOWNLOAD_BASE}/{tag}/{asset}", asset, target / subfolder)
@@ -623,21 +783,57 @@ def install_sirstrap(target: Path, tag: str, *, dry_run: bool) -> None:
     # than a tag path, and ships only Sirstrap.exe - keep it out of sirstrap/.
     jobs.append((SIRSTRAP_CLI_URL, SIRSTRAP_CLI_ASSET, target / SIRSTRAP_CLI_FOLDER))
     for url, asset, destination in jobs:
-        info(f"\n[Sirstrap] {asset}")
-        info(f"  url:    {url}")
-        info(f"  target: {destination}")
+        download_sirstrap_asset(url, asset, destination, dry_run=dry_run)
+
+
+def cleaner_executable(target: Path) -> Path | None:
+    folder = target / SIRSTRAP_CLEANER_FOLDER
+    if not folder.is_dir():
+        return None
+    executables = sorted(folder.rglob("*.exe"))
+    for executable in executables:
+        if "cleaner" in executable.name.lower():
+            return executable
+    return executables[0] if executables else None
+
+
+def install_cleaner(target: Path, *, dry_run: bool) -> None:
+    """Download just the Cleaner when --skip-sirstrap is combined with --run-cleaner."""
+    if cleaner_executable(target) is not None:
+        return
+    tag = resolve_sirstrap_tag()
+    info(f"\nSirstrap release: {tag}")
+    url = f"{SIRSTRAP_DOWNLOAD_BASE}/{tag}/{SIRSTRAP_CLEANER_ASSET}"
+    download_sirstrap_asset(
+        url, SIRSTRAP_CLEANER_ASSET, target / SIRSTRAP_CLEANER_FOLDER, dry_run=dry_run
+    )
+
+
+def run_sirhurt_cleaner(target: Path, *, dry_run: bool) -> None:
+    """Run SirHurt Cleaner non-interactively: 'y' to every prompt, per the guide."""
+    info("\n[Cleaner] SirHurt / Roblox leftovers")
+    executable = cleaner_executable(target)
+    if executable is None:
         if dry_run:
-            continue
-        with tempfile.TemporaryDirectory(prefix="sirhurt-setup-") as scratch:
-            archive = Path(scratch) / asset
-            download(url, archive)
-            if not zipfile.is_zipfile(archive):
-                raise SetupError(
-                    f"{asset} did not download as a zip archive - the release layout may have changed"
-                )
-            safe_extract_zip(archive, destination)
-        executables = sorted(path.name for path in destination.rglob("*.exe"))
-        info(f"  extracted: {', '.join(executables) if executables else '(no .exe found)'}")
+            info(f"  would run the Cleaner from {target / SIRSTRAP_CLEANER_FOLDER} (downloaded if missing)")
+            return
+        raise SetupError(f"SirHurt Cleaner isn't in {target / SIRSTRAP_CLEANER_FOLDER}")
+    if dry_run:
+        info(f"  would run {executable} (deletes Roblox/SirHurt configs and stored login data)")
+        return
+    require_admin("run the SirHurt Cleaner")
+    info(f"  {executable}")
+    info("  answering y to every prompt; stored SirHurt login data is deleted")
+    try:
+        # stdin is a pipe, so the Cleaner's own prompts take these answers and its
+        # "Press any key to exit" is skipped (Console.IsInputRedirected).
+        result = subprocess.run(
+            [str(executable)], input="y\n" * 8, text=True, cwd=str(executable.parent), check=False
+        )
+    except OSError as exc:
+        raise SetupError(f"cannot run {executable}: {exc}") from exc
+    if result.returncode != 0:
+        warn(f"SirHurt Cleaner exited with code {result.returncode}; some leftovers may remain")
 
 
 # --------------------------------------------------------------------------- #
@@ -784,10 +980,29 @@ def browser_handoff(url: str, downloads: Path, reason: str) -> Path:
     )
 
 
+def unpack_nested_archives(destination: Path, *, depth: int = 2) -> None:
+    """Unpack zips inside the archive until a bootstrapper .exe shows up.
+
+    A gofile download is the SirHurt folder itself (bootstrapper at the top);
+    a Box share wraps that folder - and the same zip - one level down, so the
+    nested copy is unpacked next to itself to leave the same usable layout.
+    """
+    for _ in range(depth):
+        if any(destination.rglob("*.exe")):
+            return
+        nested = sorted(path for path in destination.rglob("*.zip") if zipfile.is_zipfile(path))
+        if not nested:
+            return
+        for archive in nested:
+            info(f"  unpacking nested {archive.relative_to(destination).as_posix()}")
+            safe_extract_zip(archive, archive.parent)
+
+
 def extract_sirhurt(archive: Path, target: Path) -> None:
     destination = target / "sirhurt"
     if archive.suffix.lower() == ".zip" and zipfile.is_zipfile(archive):
         safe_extract_zip(archive, destination)
+        unpack_nested_archives(destination)
         executables = sorted(path.relative_to(destination).as_posix() for path in destination.rglob("*.exe"))
         suffix = f" ({', '.join(executables)})" if executables else ""
         info(f"  extracted to {destination}{suffix}")
@@ -895,7 +1110,7 @@ def configure_roblox_settings(*, dry_run: bool) -> None:
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        prog="SirHurt-Setup",
+        prog="SixSirhurtUnretardifier9000Pro",
         description="Prepare Windows, then download Sirstrap and SirHurt into one folder (stages 1-3).",
         epilog="Guide: https://sirhurt.pages.dev/guide/",
     )
@@ -932,23 +1147,109 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="don't touch Roblox's appStorage.json",
     )
+    parser.add_argument(
+        "--run-cleaner",
+        action="store_true",
+        help="run SirHurt Cleaner (deletes Roblox/SirHurt configs, including stored SirHurt login data)",
+    )
+    parser.add_argument(
+        "--reboot",
+        action="store_true",
+        help="restart Windows when the run finishes (60-second delay; cancel with 'shutdown /a')",
+    )
+    parser.add_argument(
+        "--no-survey",
+        action="store_true",
+        help="don't ask the setup questions; use the defaults (everything except the cleaner and reboot)",
+    )
     parser.add_argument("--dry-run", action="store_true", help="resolve everything and print it, write nothing")
     parser.add_argument("--version", action="version", version=f"SirHurt Setup {__version__}")
     parser.add_argument("--elevated", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
 
-def summarize(target: Path, *, reboot_expected: bool) -> None:
+NEXT_STEPS = """SirHurt setup - next steps
+==========================
+
+1. Restart Windows if the setup asked for it (the runtimes register at boot).
+2. Open Roblox and join any game - injection needs a loaded game client.
+3. Wait 5-10 seconds after the game finishes loading.
+4. Run the SirHurt bootstrapper ("SirHurt V5.exe") as Administrator - it is in
+   the "sirhurt" folder, or one subfolder down if the archive came from a Box
+   share (right-click -> Run as administrator, then accept the UAC prompt).
+5. In the bootstrapper, click Inject once and log in. Do not click Inject a second time.
+6. Test with a small script such as Infinite Yield before using your own scripts.
+
+The cleaner (if you ran it) deleted stored SirHurt login data, so you will need to
+log in again on the first injection.
+
+Guide:           https://sirhurt.pages.dev/guide/injection/
+Troubleshooting: https://sirhurt.pages.dev/guide/troubleshooting/
+Downgrade:       https://sirhurt.pages.dev/guide/downgrade/
+Sirstrap:        https://sirstrap.com/
+Discord:         https://discord.gg/sirhurt
+"""
+
+
+def write_next_steps(target: Path) -> None:
+    path = target / "README.txt"
+    try:
+        path.write_text(NEXT_STEPS, encoding="utf-8")
+    except OSError as exc:
+        warn(f"cannot write {path}: {exc}")
+
+
+def schedule_reboot(*, dry_run: bool) -> None:
+    info("\n[Reboot] Windows restarts in 60 seconds - run 'shutdown /a' to cancel")
+    if dry_run:
+        return
+    try:
+        result = subprocess.run(
+            ["shutdown", "/r", "/t", "60", "/c", "SirHurt Setup finished - restarting"],
+            check=False,
+        )
+    except OSError as exc:
+        warn(f"cannot schedule the reboot: {exc}; restart Windows yourself")
+        return
+    if result.returncode != 0:
+        warn(f"shutdown returned {result.returncode}; restart Windows yourself")
+
+
+def pause_before_exit() -> None:
+    if sys.stdin is None or not sys.stdin.isatty():
+        return
+    try:
+        input("\nPress Enter to close ...")
+    except (EOFError, KeyboardInterrupt):
+        pass
+
+
+def summarize(target: Path, *, reboot_expected: bool, cleaned: bool, sirhurt_installed: bool) -> None:
     info("\nDone. Layout:")
     for entry in sorted(target.iterdir(), key=lambda path: path.name.lower()):
         info(f"  {entry.name}{os.sep if entry.is_dir() else ''}")
     if reboot_expected:
         info("\nReboot before continuing - the runtimes register themselves at boot.")
-    info("Next: stage 4 of the guide - launch Roblox, join a game, then run the SirHurt loader")
-    info("      as Administrator: https://sirhurt.pages.dev/guide/injection/")
+    if cleaned:
+        info("\nThe cleaner removed stored SirHurt data - you'll need to log in again.")
+    if (target / "README.txt").is_file():
+        info(f"Next steps are also in {target / 'README.txt'}.")
+    if sirhurt_installed:
+        info("Next: stage 4 of the guide - launch Roblox, join a game, then run the SirHurt loader")
+        info("      as Administrator: https://sirhurt.pages.dev/guide/injection/")
+    else:
+        info("\nSirHurt itself wasn't installed - get it from https://sirhurt.net/login/download.php")
+        info(f"and extract it into {target / 'sirhurt'}, then run its bootstrapper as Administrator.")
 
 
-def run(args: argparse.Namespace) -> int:
+def run(args: argparse.Namespace, *, survey: bool) -> int:
+    preflight()
+    if args.link:
+        classify_link(args.link)  # fail fast on a malformed --link
+    if survey:
+        apply_survey(args)
+        info(f"plan: {survey_plan(args)}")
+        info("  Ctrl+C cancels.")
     if (
         args.skip_sirstrap
         and args.skip_sirhurt
@@ -956,11 +1257,9 @@ def run(args: argparse.Namespace) -> int:
         and args.skip_repair
         and args.skip_runtimes
         and args.skip_roblox_settings
+        and not args.run_cleaner
     ):
         raise SetupError("nothing to do: every stage was skipped")
-    preflight()
-    if args.link:
-        classify_link(args.link)  # fail fast on a malformed --link
     target = resolve_target(args.dir, dry_run=args.dry_run)
 
     local_archive: Path | None = None
@@ -974,12 +1273,13 @@ def run(args: argparse.Namespace) -> int:
             local_archive = find_local_archive(folders)
             if local_archive is None:
                 searched = " or ".join(str(folder) for folder in folders)
-                warn(f"no SirHurt archive found in {searched}")
-                info(
-                    "  Download the archive from https://sirhurt.net/login/download.php and put\n"
-                    f"  it next to the setup executable ({folders[-1]}), then run this again.\n"
-                    "  You can paste the download link instead if you prefer."
-                )
+                if args.dry_run:
+                    warn(f"no SirHurt archive found in {searched}")
+                else:
+                    local_archive = prompt_for_archive(folders)
+                    if local_archive is None:
+                        # 's' (or end of input) skips SirHurt - no link prompt.
+                        args.skip_sirhurt = True
 
     if not args.skip_exclusions:
         add_defender_exclusion(target, dry_run=args.dry_run)
@@ -993,6 +1293,10 @@ def run(args: argparse.Namespace) -> int:
         tag = resolve_sirstrap_tag()
         info(f"\nSirstrap release: {tag}")
         install_sirstrap(target, tag, dry_run=args.dry_run)
+    if args.run_cleaner:
+        if args.skip_sirstrap:
+            install_cleaner(target, dry_run=args.dry_run)
+        run_sirhurt_cleaner(target, dry_run=args.dry_run)
     if not args.skip_sirhurt and local_archive is None:
         link = resolve_sirhurt_link(args.link, dry_run=args.dry_run)
         if link is not None:
@@ -1006,9 +1310,22 @@ def run(args: argparse.Namespace) -> int:
     if not args.skip_roblox_settings:
         configure_roblox_settings(dry_run=args.dry_run)
     if args.dry_run:
+        if args.reboot:
+            schedule_reboot(dry_run=True)
         info("\ndry run: nothing was written")
     else:
-        summarize(target, reboot_expected=not (args.skip_repair and args.skip_runtimes))
+        if not args.skip_sirhurt:
+            write_next_steps(target)
+        summarize(
+            target,
+            reboot_expected=not (args.skip_repair and args.skip_runtimes),
+            cleaned=args.run_cleaner,
+            sirhurt_installed=not args.skip_sirhurt,
+        )
+        if args.reboot:
+            schedule_reboot(dry_run=False)
+        else:
+            pause_before_exit()
     return 0
 
 
@@ -1026,12 +1343,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     args = parse_args(raw)
     try:
-        return run(args)
+        return run(args, survey=should_survey(raw))
     except KeyboardInterrupt:
         print("\ncancelled", file=sys.stderr)
         return 130
     except SetupError as exc:
         print(f"error: {exc}", file=sys.stderr)
+        pause_before_exit()
         return 1
 
 

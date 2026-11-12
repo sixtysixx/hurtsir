@@ -6,7 +6,7 @@ $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $python = Join-Path $root ".venv\Scripts\python.exe"
 if (-not (Test-Path $python)) { $python = "python" }
 
-& $python -m nuitka --onefile --assume-yes-for-downloads --windows-console-mode=force --output-dir="$PSScriptRoot\build" --output-filename="SirHurt-Setup.exe" "$PSScriptRoot\setup.py"
+& $python -m nuitka --onefile --assume-yes-for-downloads --windows-console-mode=force --output-dir="$PSScriptRoot\build" --output-filename="SixSirhurtUnretardifier9000Pro.exe" "$PSScriptRoot\setup.py"
 if ($LASTEXITCODE -ne 0) { throw "Nuitka build failed with exit code $LASTEXITCODE" }
 
-Write-Host "Built $PSScriptRoot\build\SirHurt-Setup.exe" -ForegroundColor Green
+Write-Host "Built $PSScriptRoot\build\SixSirhurtUnretardifier9000Pro.exe" -ForegroundColor Green
