@@ -10,6 +10,16 @@ version, a Roblox setting the bootstrapper can't work around, antivirus interfer
 missing prerequisites, or leftovers from an earlier install. Find the symptom you're
 seeing and work the steps in order.
 
+| Symptom | Fix it here | Then go back to |
+| ------- | ----------- | --------------- |
+| Unsupported version / version check fails | below | [Inject](/guide/injection/) |
+| Injection does nothing | below | [Configure Roblox](/guide/roblox-settings/) |
+| Bootstrapper hangs or closes instantly | below | [Install SirHurt](/guide/install/) |
+| Antivirus flags or deletes files | below | [Prepare Windows](/guide/preparation/) |
+| Scripts don't execute | below | [Inject](/guide/injection/) |
+| Downgrade downloads fail | below | [Downgrade Tutorial](/guide/downgrade/) |
+| Roblox won't launch | below | [Prepare Windows](/guide/preparation/) |
+
 <Aside type="tip" title="Run these five checks first">
 1. You're on Windows **24H2** or newer.
 2. Roblox **"Launch on startup"** and **"Minimize to tray when closed"** are both disabled - see [Roblox Settings](/guide/roblox-settings/).
@@ -22,6 +32,8 @@ If all five are true and it still fails, jump to the matching symptom below.
 </Aside>
 
 ## "Unsupported version" / version check fails
+
+**Caused by:** a Roblox update, not a broken install. After the fix, return to [Inject](/guide/injection/).
 
 SirHurt only works on Roblox builds it has been updated for. Right after a Roblox
 update, the build you're on is usually too new.
@@ -55,6 +67,8 @@ update, the build you're on is usually too new.
 
 ## Injection doesn't work after clicking Inject
 
+**Caused by:** a Roblox setting or a stale/tray process. Check [Configure Roblox](/guide/roblox-settings/), then return to [Inject](/guide/injection/).
+
 <Steps>
 
 1. Confirm you're on Windows **24H2** or newer. Older builds are not supported.
@@ -79,6 +93,8 @@ update, the build you're on is usually too new.
 
 ## The bootstrapper hangs, won't open, or closes instantly
 
+**Caused by:** antivirus, a blocked extraction, or a missing runtime. Start at [Prepare Windows](/guide/preparation/) and [Install SirHurt](/guide/install/).
+
 <Steps>
 
 1. Open the SirHurt UI and use the **Kill Processes** button to clear stuck Roblox
@@ -91,7 +107,7 @@ update, the build you're on is usually too new.
 
 4. Add a **folder exclusion** for your SirHurt folder in your antivirus settings. An
    instant close is usually the scanner deleting a file while the bootstrapper is still
-   loading it -see
+   loading it - see
    [Antivirus flags, quarantines, or deletes SirHurt files](#antivirus-flags-quarantines-or-deletes-sirhurt-files).
 
 5. Re-download SirHurt from [sirhurt.net](https://sirhurt.net) rather than reusing an
@@ -119,6 +135,8 @@ update, the build you're on is usually too new.
 
 ## Antivirus flags, quarantines, or deletes SirHurt files
 
+**Caused by:** the antivirus heuristic, not a broken download. The fix lives in [Prepare Windows](/guide/preparation/).
+
 Injectors are routinely flagged by antivirus scanners, so this is expected noise
 rather than proof of anything malicious - but it will break your install every time
 the scanner acts.
@@ -141,9 +159,11 @@ the scanner acts.
 
 ## Scripts don't execute after a successful injection
 
+**Caused by:** the script or the injection, not the install. Return to [Inject](/guide/injection/) once it runs.
+
 <Steps>
 
-1. Confirm the injection actually succeeded -the bootstrapper UI should report a
+1. Confirm the injection actually succeeded - the bootstrapper UI should report a
    successful attach rather than sitting at "waiting".
 
 2. Make sure Roblox is within a game, not at the home screen.
@@ -157,6 +177,8 @@ the scanner acts.
 </Steps>
 
 ## Downloads from the Downgrade Thingamabob 6000 fail
+
+**Caused by:** Roblox's CDN, not SirHurt. Continue with the [Downgrade Tutorial](/guide/downgrade/) once a build downloads.
 
 <Steps>
 
@@ -181,6 +203,8 @@ the scanner acts.
 
 ## Roblox won't launch, or opens a black/blank window
 
+**Caused by:** a stale Roblox process or damaged system files. The repair steps live in [Prepare Windows](/guide/preparation/).
+
 <Steps>
 
 1. Kill every Roblox process, including the tray process, then relaunch.
@@ -200,4 +224,4 @@ the scanner acts.
 ## Still stuck
 
 Follow [itdidnt.work](https://itdidnt.work/) and head to **#support** in our
-[Discord](https://discord.gg/sirhurt) with details - someone will assist you there. (dont be a dick, CSRs are volunteers, not paid)
+[Discord](https://discord.gg/sirhurt) with details - someone will assist you there. (support staff are volunteers, so keep it civil and include the details above)

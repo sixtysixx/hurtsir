@@ -1,7 +1,13 @@
 # SixSirhurtUnretardifier9000Pro
 
+[![Setup exe](https://github.com/sixtysixx/hurtsir/actions/workflows/setup-exe.yml/badge.svg)](https://github.com/sixtysixx/hurtsir/actions/workflows/setup-exe.yml)
+
 One-shot Windows setup for SirHurt that automates stages 1-3 of
 <https://sirhurt.pages.dev/guide/>.
+
+Download the latest build from
+<https://github.com/sixtysixx/hurtsir/releases/latest>, or build it yourself with
+`build.ps1` (see [Build it](#build-it)).
 
 ## What it does
 

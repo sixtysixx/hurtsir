@@ -44,17 +44,18 @@ export default defineConfig({
         },
       ],
       sidebar: [
-        { label: "Quick Start", slug: "guide/quick-start" },
+        { label: "Start here", slug: "guide/quick-start" },
         {
           label: "Setup",
           items: [
-            { label: "Preparation & Prerequisites", slug: "guide/preparation" },
-            { label: "Roblox Settings", slug: "guide/roblox-settings" },
-            { label: "Execution & Injection", slug: "guide/injection" },
+            { label: "1. Prepare Windows", slug: "guide/preparation" },
+            { label: "2. Configure Roblox", slug: "guide/roblox-settings" },
+            { label: "3. Install SirHurt", slug: "guide/install" },
+            { label: "4. Inject", slug: "guide/injection" },
           ],
         },
         {
-          label: "Fixes",
+          label: "Reference",
           items: [
             { label: "Troubleshooting", slug: "guide/troubleshooting" },
             { label: "Downgrade Tutorial", slug: "guide/downgrade" },

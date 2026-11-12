@@ -1,5 +1,5 @@
 ---
-title: Roblox Settings
+title: Configure Roblox
 description: Configure Roblox and clear stale installs so the SirHurt bootstrapper can attach cleanly.
 ---
 
@@ -9,15 +9,17 @@ The bootstrapper has to find the running Roblox client and attach to it. Two Rob
 routinely get in the way, and leftover files from previous installs cause the rest of the
 "it injected once and never again" reports.
 
-Do this page after [Preparation & Prerequisites](/guide/preparation/) and before your first
-attempt at [Execution & Injection](/guide/injection/).
+Do this page after [Prepare Windows](/guide/preparation/) and before
+[Install SirHurt](/guide/install/).
 
 <Aside type="tip" title="Why these two settings matter">
-  - **Launch on startup** lets Roblox open itself at login, so you end up with a
-  client running before the bootstrapper is ready for it. - **Minimize to tray
-  when closed** keeps a hidden Roblox process alive after you close the window.
-  The bootstrapper can't tell that client apart from a stale one, which is what
-  causes injection to silently do nothing.
+
+- **Launch on startup** lets Roblox open itself at login, so you end up with a client running
+  before the bootstrapper is ready for it.
+- **Minimize to tray when closed** keeps a hidden Roblox process alive after you close the
+  window. The bootstrapper can't tell that client apart from a stale one, which is what causes
+  injection to silently do nothing.
+
 </Aside>
 
 ## Step 1 - Disable Launch on startup
@@ -28,7 +30,7 @@ attempt at [Execution & Injection](/guide/injection/).
    while in a game and open the settings tab).
 
 2. Find **Launch on startup** and switch it **off**. The exact label can differ slightly
-   between Roblox versions -look for the option that makes Roblox open itself when Windows
+   between Roblox versions - look for the option that makes Roblox open itself when Windows
    starts.
 
 3. Leave the settings menu open for the next step.
@@ -84,7 +86,7 @@ working, old files are the likely cause. The SirHurt Cleaner wipes them.
 
 <Steps>
 
-1. Download the [SirHurt Cleaner](https://sirstrap.com/) -it ships
+1. Download the [SirHurt Cleaner](https://sirstrap.com/) - it ships
    bundled with Sirstrap.
 
 2. Make sure Roblox is fully closed first (step 3).
@@ -112,7 +114,7 @@ SirHurt has been patched for. This can happen immediately after a Roblox release
 1. Check the announcements channel in our [Discord](https://discord.gg/sirhurt) for the
    currently supported build.
 
-2. Note the recommended build hash -it looks like `version-abc123cbt4204mee`.
+2. Note the recommended build hash - it looks like `version-abc123cbt4204mee`.
 
 3. Follow the [Downgrade Tutorial](/guide/downgrade/) to install that build, or open the
    [Downgrade Thingamabob 6000](/rdd/) and use **Download Previous Version**, which tracks the current
@@ -138,6 +140,5 @@ SirHurt has been patched for. This can happen immediately after a Roblox release
 
 </Steps>
 
-Once this list is clean, move on to [Execution & Injection](/guide/injection/). If injection
-still fails afterwards, [Troubleshooting](/guide/troubleshooting/) works through each symptom
-individually.
+Once this list is clean, move on to [Install SirHurt](/guide/install/). If a later step still
+fails, [Troubleshooting](/guide/troubleshooting/) works through each symptom individually.

@@ -1,0 +1,107 @@
+---
+title: Install SirHurt
+description: Download SirHurt, extract it into your install folder, and add the launcher and cleaner without breaking the layout.
+---
+
+import { Steps, Aside } from "@astrojs/starlight/components";
+
+By the end of this page your **SirHurt folder** contains the SirHurt files, an optional Sirstrap
+launcher, and the Cleaner. Everything after this is running them, not downloading them.
+
+<Aside type="tip" title="Before you start">
+  - You finished [Prepare Windows](/guide/preparation/) and
+    [Configure Roblox](/guide/roblox-settings/).
+  - Your **SirHurt folder** exists, is outside OneDrive and `C:\Program Files`, and its antivirus
+    exclusion is confirmed.
+  - You are logged in to your SirHurt account.
+</Aside>
+
+<Aside type="note" title="Using the setup tool?">
+  If you ran [SixSirhurtUnretardifier9000Pro](https://github.com/sixtysixx/hurtsir/releases/latest),
+  this page is already done - it extracts the archive and fetches Sirstrap and the Cleaner. Check
+  that `sirhurt\` contains the bootstrapper and continue to [Inject](/guide/injection/).
+</Aside>
+
+## Step 1 - Get the archive
+
+<Steps>
+
+1. Log in at [sirhurt.net](https://sirhurt.net/) and open the download page:
+   `sirhurt.net/login/download.php`.
+
+2. Copy the whole link it gives you. It is a single-use link in one of two shapes:
+
+   - `https://gofile.io/d/XXXXXXXX` - a gofile folder containing the archive.
+   - `https://app.box.com/s/XXXXXXXX` - a Box share.
+
+3. Open the link and download the ZIP archive.
+
+</Steps>
+
+<Aside type="caution" title="Do not copy the address bar afterwards">
+  gofile and Box rewrite their URLs once a download starts. If the first download fails, go back
+  to `sirhurt.net/login/download.php` for a fresh link instead of reusing the rewritten one.
+</Aside>
+
+## Step 2 - Extract it into the install folder
+
+<Steps>
+
+1. Extract the archive into `<SirHurt folder>\sirhurt` with **7-Zip** or **WinRAR**.
+
+2. Keep the archive's own top-level folder. Don't flatten it into `sirhurt` directly - the
+   bootstrapper expects its neighbouring `bin`, `resources`, and similar folders to stay together.
+
+3. Confirm `sirhurt\` contains the bootstrapper (`SirHurt V5.exe`). A Box download sometimes
+   keeps it one subfolder deeper, for example `sirhurt\SirHurt V5 Web\SirHurt V5.exe`; that is
+   fine as long as the file and its folders are intact.
+
+</Steps>
+
+<Aside type="danger" title="Do not use Windows' built-in extractor">
+  "Extract All" leaves the extracted DLLs marked as blocked, which is enough to stop the
+  bootstrapper from starting. This is the most common cause of "it closes instantly". Use 7-Zip
+  or WinRAR.
+</Aside>
+
+## Step 3 - Add Sirstrap and the Cleaner
+
+Sirstrap is optional, but it is the supported way to launch a specific Roblox build, and it ships
+with the Cleaner.
+
+<Steps>
+
+1. Open [sirstrap.com](https://sirstrap.com/) and download **`Sirstrap.UI.zip`**.
+
+2. Extract it into `<SirHurt folder>\sirstrap`. The archive has no wrapper folder, so you should
+   end up with `sirstrap\Sirstrap.exe` **and** a `sirstrap\bin\` folder beside it.
+
+3. Download **`SirHurt.Cleaner.CLI.zip`** from the same release page and extract it into
+   `<SirHurt folder>\cleaner`, giving you `cleaner\SirHurtCleaner.exe`.
+
+4. Only run the Cleaner if this is a reinstall or injection has stopped working. On a first
+   install, leave it alone - it deletes stored SirHurt login data.
+
+</Steps>
+
+## Step 4 - Verify the layout
+
+<Steps>
+
+1. `sirhurt\` contains the bootstrapper and its folders.
+
+2. `sirstrap\Sirstrap.exe` and `sirstrap\bin\` both exist (or you have decided to launch Roblox
+   normally instead).
+
+3. `cleaner\SirHurtCleaner.exe` exists if you downloaded it.
+
+4. Your antivirus exclusion still covers the whole **SirHurt folder**, so the new files are
+   inside it too.
+
+5. Roblox is fully closed before you continue.
+
+</Steps>
+
+Once the layout is right, move on to [Inject](/guide/injection/). If the bootstrapper won't start
+after this, [Troubleshooting](/guide/troubleshooting/) covers the extraction and antivirus causes
+first.

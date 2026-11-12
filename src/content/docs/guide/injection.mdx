@@ -1,17 +1,23 @@
 ---
-title: Execution & Injection
+title: Inject
 description: Launch Roblox, run the bootstrapper as Administrator, and inject SirHurt without the classic mistakes.
 ---
 
 import { Steps, Aside } from "@astrojs/starlight/components";
 
-Injection is the step where order and timing matter most. Roblox has to be up and fully loaded
-before the bootstrapper can attach, and the bootstrapper has to run with elevation or it won't
-be able to touch the client.
+<Aside type="tip" title="Before you start">
 
-Work through [Preparation & Prerequisites](/guide/preparation/) and
-[Roblox Settings](/guide/roblox-settings/) first -most "injection failed" reports trace back to
-something on one of those two pages.
+- You finished [Prepare Windows](/guide/preparation/), [Configure Roblox](/guide/roblox-settings/)
+  and [Install SirHurt](/guide/install/).
+- Roblox is fully closed right now, with no tray process left behind.
+- Your **SirHurt folder** contains the bootstrapper.
+
+</Aside>
+
+Injection is the step where order and timing matter most. Roblox has to be up and fully loaded
+before the bootstrapper can attach, and the bootstrapper has to run with elevation or it won't be
+able to touch the client. Most "injection failed" reports trace back to one of the three earlier
+pages.
 
 ## Step 1 - Launch Roblox and join a game
 
@@ -19,7 +25,7 @@ something on one of those two pages.
 
 1. Launch Roblox **first**, before the bootstrapper.
 
-2. Join any game. You can't inject from the Roblox home screen -there needs to be a live game
+2. Join any game. You can't inject from the Roblox home screen - there needs to be a live game
    client to attach to.
 
 3. Let the game finish loading. If you inject while the loading screen is still up, the injector
@@ -30,7 +36,7 @@ something on one of those two pages.
 </Steps>
 
 <Aside type="tip">
-  Picking a small, private or empty game makes this much easier -there's less
+  Picking a small, private or empty game makes this much easier - there's less
   going on during startup, so "the game has finished loading" is unambiguous.
 </Aside>
 
@@ -51,10 +57,10 @@ something on one of those two pages.
 
 <Steps>
 
-1. Locate the SirHurt Bootstrapper in the folder you set up during
-   [Preparation](/guide/preparation/).
+1. Locate the bootstrapper (`SirHurt V5.exe`) in your **SirHurt folder** - see
+   [Install SirHurt](/guide/install/) if you're not sure where that is.
 
-2. Right-click it and choose **Run as administrator**. Don't just double-click it -without
+2. Right-click it and choose **Run as administrator**. Don't just double-click it - without
    elevation it can't attach to Roblox or write to the Roblox directory.
 
 3. Approve the Windows UAC prompt.
@@ -74,7 +80,7 @@ something on one of those two pages.
    than clicking straight away.
 
 3. If it sits at "waiting" or never detects Roblox, stop here and check
-   [Troubleshooting](/guide/troubleshooting/) -injecting from that state is what produces
+   [Troubleshooting](/guide/troubleshooting/) - injecting from that state is what produces
    "nothing happened".
 
 </Steps>
@@ -109,12 +115,16 @@ Don't judge the injection by whether the UI looks right.
 2. Execute it and watch for its console or on-screen output.
 
 3. A script that runs confirms the injector is live. If it doesn't run, the problem is in the
-   injection rather than the script -see [Troubleshooting](/guide/troubleshooting/).
+   injection rather than the script - see [Troubleshooting](/guide/troubleshooting/).
 
 4. Only test your real scripts once the injector is confirmed working, so you're not debugging
    two things at once.
 
 </Steps>
+
+That's the whole path: Prepare → Configure → Install → Inject. Once an injection has worked,
+treat [Troubleshooting](/guide/troubleshooting/) as the reference for anything that breaks later,
+and [Start here](/guide/quick-start/) as the map if you ever need to redo a stage.
 
 ## If it fails
 
@@ -128,7 +138,7 @@ Don't judge the injection by whether the UI looks right.
    and retry.
 
 4. Work the matching symptom on the [Troubleshooting](/guide/troubleshooting/) page instead of
-   guessing -each one is a numbered walkthrough.
+   guessing - each one is a numbered walkthrough.
 
 5. If you're told you're on an unsupported version, that's a Roblox update, not a broken setup.
    See the [Downgrade Tutorial](/guide/downgrade/).

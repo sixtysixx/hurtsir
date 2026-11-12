@@ -5,8 +5,8 @@ template: splash
 hero:
   tagline: A comprehensive, step-by-step guide for setting up and troubleshooting SirHurt on Roblox.
   actions:
-    - text: Setting up & Troubleshooting
-      link: /guide/preparation/
+    - text: Start here
+      link: /guide/quick-start/
       icon: right-arrow
     - text: Downgrade Thingamabob 6000
       link: /rdd/
@@ -18,28 +18,33 @@ import { LinkCard, CardGrid } from "@astrojs/starlight/components";
 
 <CardGrid>
   <LinkCard
-    title="Preparation"
-    description="Disable antivirus, install prerequisites, and configure your system for SirHurt."
+    title="1. Prepare Windows"
+    description="Pick an install folder, add antivirus exclusions, repair system files, install the runtimes."
     href="/guide/preparation/"
   />
   <LinkCard
-    title="Roblox Settings"
-    description="Configure Roblox settings to prevent conflicts with the bootstrapper."
+    title="2. Configure Roblox"
+    description="Turn off launch-on-startup and minimize-to-tray, then close every Roblox process."
     href="/guide/roblox-settings/"
   />
   <LinkCard
-    title="Execution & Injection"
-    description="Launch Roblox, run the bootstrapper as admin, and inject SirHurt."
+    title="3. Install SirHurt"
+    description="Download the archive, extract it correctly, and add Sirstrap and the Cleaner."
+    href="/guide/install/"
+  />
+  <LinkCard
+    title="4. Inject"
+    description="Launch Roblox, run the bootstrapper as Administrator, and confirm it works."
     href="/guide/injection/"
   />
   <LinkCard
     title="Troubleshooting"
-    description="Fix common issues like injection failures and version errors."
+    description="Symptom-by-symptom fixes that point back at the stage that caused them."
     href="/guide/troubleshooting/"
   />
   <LinkCard
     title="Downgrade Tutorial"
-    description="Download specific Roblox versions for compatibility with SirHurt."
+    description="Install a specific Roblox build when SirHurt is pinned to an older one."
     href="/guide/downgrade/"
   />
   <LinkCard

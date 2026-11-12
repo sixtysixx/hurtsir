@@ -1,0 +1,73 @@
+---
+title: Start here
+description: The four-step path from a stock Windows install to a working SirHurt injection.
+---
+
+import { LinkCard, CardGrid, Aside } from "@astrojs/starlight/components";
+
+This is one path, in order. Each page assumes the previous one is finished, so if a step looks
+like it is missing something, go back one page rather than hunting for a shortcut.
+
+<Aside type="tip" title="You need, once">
+  - Windows **11 24H2 or newer** - run `winver` and check for build **26100+**.
+  - **Administrator access** on the account you use.
+  - Roughly **2 GB** of free disk space.
+  - A **SirHurt account** - the download page requires a login and active subscription.
+</Aside>
+
+## The path
+
+<CardGrid>
+  <LinkCard
+    title="1. Prepare Windows"
+    description="Pick an install folder, add antivirus exclusions, repair system files, install the runtimes."
+    href="/guide/preparation/"
+  />
+  <LinkCard
+    title="2. Configure Roblox"
+    description="Turn off launch-on-startup and minimize-to-tray, then close every Roblox process."
+    href="/guide/roblox-settings/"
+  />
+  <LinkCard
+    title="3. Install SirHurt"
+    description="Download the archive, extract it into the install folder, add Sirstrap and the Cleaner."
+    href="/guide/install/"
+  />
+  <LinkCard
+    title="4. Inject"
+    description="Launch Roblox, join a game, run the bootstrapper as Administrator, and confirm it works."
+    href="/guide/injection/"
+  />
+</CardGrid>
+
+## Automated or manual
+
+<Aside type="note" title="The setup tool does steps 1-3 for you">
+  [SixSirhurtUnretardifier9000Pro](https://github.com/sixtysixx/hurtsir/releases/latest) is a
+  Windows exe that adds the antivirus exclusion, installs the runtimes, fetches Sirstrap, extracts
+  a SirHurt archive you place next to it, and turns off the two Roblox settings. It asks before
+  each stage, needs Administrator rights, and writes a `README.txt` with the next steps into the
+  install folder. Skip the manual pages it covers and pick the guide up at
+  [Inject](/guide/injection/).
+
+  Building it yourself: `powershell -ExecutionPolicy Bypass -File tools/sirhurt-setup/build.ps1`.
+</Aside>
+
+If you would rather do it by hand, work the four pages above in order. Do not mix the two routes:
+finish the manual steps you started, or let the tool finish its own.
+
+## Words used in this guide
+
+| Term | Meaning |
+| ---- | ------- |
+| **SirHurt folder** | The dedicated folder you create in step 1. Everything is extracted under it. |
+| **Bootstrapper** | `SirHurt V5.exe`, the file you run as Administrator to inject. |
+| **Sirstrap** | An alternative Roblox launcher from the same authors. Optional, but it is the supported way to pin a Roblox build. |
+| **Cleaner** | `SirHurtCleaner.exe`. Wipes old SirHurt and Roblox leftovers, including stored login data. |
+| **Deployment / downgrade** | A specific Roblox build, identified by a hash such as `version-abc123cbt4204mee`. |
+
+## If something goes wrong
+
+[Troubleshooting](/guide/troubleshooting/) is a reference, not a stage. Each entry starts from a
+symptom and names the stage it belongs to, so you can fix the cause and then go back to that step
+instead of restarting the whole guide.
