@@ -60,16 +60,20 @@ __version__ = "1.1.0"
 
 SIRSTRAP_RELEASES_API = "https://codeberg.org/api/v1/repos/Sirstrap/Sirstrap/releases?limit=20"
 SIRSTRAP_DOWNLOAD_BASE = "https://sirstrap.com/releases"
-SIRSTRAP_FALLBACK_TAG = "v10.12.7.4-beta"
+SIRSTRAP_FALLBACK_TAG = "v10.12.7.6-beta"
 SIRSTRAP_CLEANER_ASSET = "SirHurt.Cleaner.CLI.zip"
 SIRSTRAP_CLEANER_FOLDER = "cleaner"
+SIRSTRAP_CLI_FOLDER = "sirstrap-cli"
 SIRSTRAP_ASSETS = (
     ("Sirstrap.UI.zip", "sirstrap"),
     (SIRSTRAP_CLEANER_ASSET, SIRSTRAP_CLEANER_FOLDER),
+    # The CLI zip ships only Sirstrap.exe, so it gets its own folder.
+    ("Sirstrap.CLI.zip", SIRSTRAP_CLI_FOLDER),
 )
-SIRSTRAP_CLI_URL = "https://www.sirstrap.com/releases/download.php?file=Sirstrap.CLI.zip"
-SIRSTRAP_CLI_ASSET = "Sirstrap.CLI.zip"
-SIRSTRAP_CLI_FOLDER = "sirstrap-cli"
+# Older tags predate the CLI asset; fall back to the latest-release endpoint.
+SIRSTRAP_ASSET_FALLBACKS = {
+    "Sirstrap.CLI.zip": "https://www.sirstrap.com/releases/download.php?file=Sirstrap.CLI.zip",
+}
 # The thank-you page (DOTNET481_PAGE) is HTML; its "download manually" link is
 # this fwlink, which resolves to NDP481-Web.exe.
 DOTNET481_PAGE = "https://dotnet.microsoft.com/en-us/download/dotnet-framework/thank-you/net481-web-installer"
@@ -277,21 +281,36 @@ def require_admin(reason: str) -> None:
         )
 
 
+def relaunch_target() -> Path:
+    """The executable the user actually launched - not Nuitka's %TEMP% payload."""
+    if not is_compiled():
+        return Path(sys.executable)
+    for candidate in (os.environ.get("NUITKA_ONEFILE_BINARY"), sys.argv[0], sys.executable):
+        if not candidate:
+            continue
+        path = Path(candidate).expanduser()
+        try:
+            if path.is_file() and not is_unpack_folder(path.parent):
+                return path.resolve()
+        except OSError:
+            continue
+    return Path(sys.executable)
+
+
 def elevate(argv: list[str]) -> bool:
     """Relaunch this script/exe elevated through UAC; True when that copy started."""
-    if getattr(sys, "frozen", False):
-        arguments = list(argv)
-    else:
-        arguments = [str(Path(__file__).resolve()), *argv]
+    executable = relaunch_target()
+    arguments = list(argv) if is_compiled() else [str(Path(__file__).resolve()), *argv]
     parameters = subprocess.list2cmdline([*arguments, "--elevated"])
     try:
         shell_execute = ctypes.windll.shell32.ShellExecuteW  # type: ignore[attr-defined]
-        result = shell_execute(None, "runas", sys.executable, parameters, str(Path.cwd()), 1)
+        result = shell_execute(None, "runas", str(executable), parameters, str(Path.cwd()), 1)
     except (AttributeError, OSError) as exc:
         warn(f"cannot request Administrator rights: {exc}")
         return False
     if result <= 32:
-        warn("the Administrator request was refused (UAC prompt declined)")
+        detail = "the UAC prompt was declined" if result == 5 else f"ShellExecuteW returned {result}"
+        warn(f"could not start {executable.name} elevated: {detail}")
         return False
     return True
 
@@ -775,15 +794,17 @@ def download_sirstrap_asset(url: str, asset: str, destination: Path, *, dry_run:
 
 
 def install_sirstrap(target: Path, tag: str, *, dry_run: bool) -> None:
-    jobs = [
-        (f"{SIRSTRAP_DOWNLOAD_BASE}/{tag}/{asset}", asset, target / subfolder)
-        for asset, subfolder in SIRSTRAP_ASSETS
-    ]
-    # The CLI build is served from sirstrap.com's latest-release endpoint rather
-    # than a tag path, and ships only Sirstrap.exe - keep it out of sirstrap/.
-    jobs.append((SIRSTRAP_CLI_URL, SIRSTRAP_CLI_ASSET, target / SIRSTRAP_CLI_FOLDER))
-    for url, asset, destination in jobs:
-        download_sirstrap_asset(url, asset, destination, dry_run=dry_run)
+    for asset, subfolder in SIRSTRAP_ASSETS:
+        url = f"{SIRSTRAP_DOWNLOAD_BASE}/{tag}/{asset}"
+        destination = target / subfolder
+        try:
+            download_sirstrap_asset(url, asset, destination, dry_run=dry_run)
+        except SetupError as exc:
+            fallback = SIRSTRAP_ASSET_FALLBACKS.get(asset)
+            if fallback is None:
+                raise
+            warn(f"{asset} is not in {tag} ({exc}); using the latest release instead")
+            download_sirstrap_asset(fallback, asset, destination, dry_run=dry_run)
 
 
 def cleaner_executable(target: Path) -> Path | None:

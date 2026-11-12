@@ -17,6 +17,19 @@ pnpm-debug.log*
 .env
 .env.production
 
+# python artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# compiled binaries / build output
+*.exe
+*.dll
+*.pdb
+tools/sirhurt-setup/build/
+
 # macOS-specific files
 .DS_Store
 Thumbs.db
