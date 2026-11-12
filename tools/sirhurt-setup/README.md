@@ -139,3 +139,16 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 
 The script builds `setup.py` with Nuitka, using the repository `.venv` when it exists, and
 writes `build\SixSirhurtUnretardifier9000Pro.exe`.
+
+## Releases
+
+`.github/workflows/setup-exe.yml` builds on every push to `main` that touches the tool and on all
+pull requests, but only publishes a release when one of these is true:
+
+- a tag matching `v*` or `[0-9]*` is pushed (`git tag v1.1.0 && git push origin v1.1.0`);
+- a GitHub release is published with the **Release** event;
+- **Actions → Setup exe → Run workflow** is started with a tag in the `release` input.
+
+The release job uploads `SixSirhurtUnretardifier9000Pro.exe` and `SHA256SUMS.txt`; if the release
+already exists it uploads with `--clobber` instead of failing. A plain push to `main` never
+publishes anything.
