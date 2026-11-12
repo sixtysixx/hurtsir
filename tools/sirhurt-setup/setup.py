@@ -56,7 +56,7 @@ import webbrowser
 import zipfile
 from pathlib import Path
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 SIRSTRAP_RELEASES_API = "https://codeberg.org/api/v1/repos/Sirstrap/Sirstrap/releases?limit=20"
 SIRSTRAP_DOWNLOAD_BASE = "https://sirstrap.com/releases"
@@ -1062,18 +1062,49 @@ def roblox_storage_path() -> Path:
     return Path(local).joinpath(*ROBLOX_STORAGE_PARTS)
 
 
+ROBLOX_PROCESSES = ("RobloxPlayerBeta.exe", "RobloxCrashHandler.exe")
+
+
+def running_roblox_processes() -> list[str]:
+    found: list[str] = []
+    for name in ROBLOX_PROCESSES:
+        try:
+            result = subprocess.run(
+                ["tasklist", "/FI", f"IMAGENAME eq {name}", "/NH", "/FO", "CSV"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if name.lower() in (result.stdout or "").lower():
+            found.append(name)
+    return found
+
+
 def roblox_running() -> bool:
-    try:
-        result = subprocess.run(
-            ["tasklist", "/FI", "IMAGENAME eq RobloxPlayerBeta.exe", "/NH"],
-            capture_output=True,
-            text=True,
-            timeout=15,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return False
-    return "RobloxPlayerBeta" in (result.stdout or "")
+    return bool(running_roblox_processes())
+
+
+def close_roblox() -> bool:
+    """Kill the Roblox processes and wait for them to disappear."""
+    for name in running_roblox_processes():
+        try:
+            subprocess.run(
+                ["taskkill", "/IM", name, "/F"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+    for _ in range(20):
+        if not roblox_running():
+            return True
+        time.sleep(0.5)
+    return not roblox_running()
 
 
 def configure_roblox_settings(*, dry_run: bool) -> None:
@@ -1093,6 +1124,12 @@ def configure_roblox_settings(*, dry_run: bool) -> None:
         action = "would create" if dry_run else "creating"
         info(f"  no appStorage.json yet - {action} one with both settings off")
 
+    if str(settings.get("IsFirstLaunchAfterInstall", "")).lower() == "true":
+        warn(
+            "Roblox has not completed a first launch on this profile yet - it rewrites "
+            "appStorage.json on start, so re-run this stage after opening Roblox once"
+        )
+
     changed = False
     for key, disabled in ROBLOX_SETTINGS.items():
         current = settings.get(key)
@@ -1109,8 +1146,20 @@ def configure_roblox_settings(*, dry_run: bool) -> None:
     if dry_run:
         info("  would save appStorage.json")
         return
+
+    # Roblox writes its in-memory settings back when the client exits, so a
+    # running client would silently undo this change.
     if roblox_running():
-        warn("Roblox is running - close it, or it may write these settings back when it exits")
+        if sys.stdin is not None and sys.stdin.isatty():
+            answer = ask_yes_no(
+                "Roblox is running; close it now so it cannot write the old values back?", True
+            )
+            if not answer or not close_roblox():
+                raise SetupError("Roblox is still running - close it and run the setup again")
+            info("  Roblox closed")
+        else:
+            raise SetupError("Roblox is running - close it and run the setup again")
+
     backup = path.with_name(path.name + ".bak")
     partial = path.with_name(path.name + ".part")
     try:
@@ -1121,7 +1170,20 @@ def configure_roblox_settings(*, dry_run: bool) -> None:
     except OSError as exc:
         partial.unlink(missing_ok=True)
         raise SetupError(f"cannot write {path}: {exc}") from exc
-    info(f"  saved{' (backup: ' + backup.name + ')' if backup.exists() else ''}")
+
+    try:
+        written = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SetupError(f"wrote {path} but cannot read it back: {exc}") from exc
+    if not isinstance(written, dict):
+        raise SetupError(f"wrote {path} but it no longer contains a JSON object")
+    still_on = [
+        key for key in ROBLOX_SETTINGS
+        if str(written.get(key, "")).strip().lower() != "false"
+    ]
+    if still_on:
+        raise SetupError(f"{path} still reports {', '.join(still_on)} as enabled")
+    info(f"  saved and verified (backup: {backup.name})" if backup.exists() else "  saved and verified")
 
 
 # --------------------------------------------------------------------------- #

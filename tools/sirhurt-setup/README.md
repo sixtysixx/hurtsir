@@ -22,7 +22,8 @@ Download the latest build from
 - optionally downloads Sirstrap's UI, the SirHurt Cleaner and the Sirstrap CLI, and can
   run the Cleaner in the same pass;
 - optionally turns off "Launch at startup" and "Minimize to tray when closed" in Roblox's
-  `appStorage.json`;
+  `appStorage.json` - it offers to close a running Roblox first (the client writes its
+  in-memory settings back on exit) and re-reads the file afterwards to confirm the change;
 - optionally schedules a reboot (the runtimes register themselves at boot);
 - writes `README.txt` with the next steps into the install folder (when SirHurt is
   installed).
