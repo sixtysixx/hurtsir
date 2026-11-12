@@ -82,28 +82,11 @@ crashes. This chain checks the component store and repairs it from a known-good 
 1. Open the Start menu, type `PowerShell`, right-click **Windows PowerShell** and choose
    **Run as administrator**.
 
-2. Paste the following and press Enter. It checks the exit code after every command and prints
-   one green or red summary line at the end:
+2. Paste the following single line and press Enter. It checks the exit code after every command
+   and prints one green or red summary line at the end:
 
    ```powershell
-   $failed = $false
-   foreach ($step in @(
-       @{ Name = "SFC scan";           Exe = "sfc.exe";  Args = @("/scannow") },
-       @{ Name = "DISM CheckHealth";   Exe = "dism.exe"; Args = @("/Online", "/Cleanup-Image", "/CheckHealth") },
-       @{ Name = "DISM ScanHealth";    Exe = "dism.exe"; Args = @("/Online", "/Cleanup-Image", "/ScanHealth") },
-       @{ Name = "DISM RestoreHealth"; Exe = "dism.exe"; Args = @("/Online", "/Cleanup-Image", "/RestoreHealth") }
-   )) {
-       Write-Host "==> $($step.Name)" -ForegroundColor Cyan
-       & $step.Exe @($step.Args)
-       $code = $LASTEXITCODE
-       if ($code -notin 0, 3010) {
-           Write-Host "FAILED: $($step.Name) exited with code $code" -ForegroundColor Red
-           $failed = $true
-           break
-       }
-   }
-   if ($failed) { Write-Host "ERROR: System repair chain failed." -ForegroundColor Red }
-   else { Write-Host "SUCCESS: System repair chain completed. Reboot before continuing." -ForegroundColor Green }
+   $failed = $false; foreach ($step in @(@{Name='SFC scan';Exe='sfc.exe';Args=@('/scannow')},@{Name='DISM CheckHealth';Exe='dism.exe';Args=@('/Online','/Cleanup-Image','/CheckHealth')},@{Name='DISM ScanHealth';Exe='dism.exe';Args=@('/Online','/Cleanup-Image','/ScanHealth')},@{Name='DISM RestoreHealth';Exe='dism.exe';Args=@('/Online','/Cleanup-Image','/RestoreHealth')})) { Write-Host "==> $($step.Name)" -ForegroundColor Cyan; & $step.Exe @($step.Args); $code = $LASTEXITCODE; if ($code -notin 0, 3010) { Write-Host "FAILED: $($step.Name) exited with code $code" -ForegroundColor Red; $failed = $true; break } }; if ($failed) { Write-Host "ERROR: System repair chain failed." -ForegroundColor Red } else { Write-Host "SUCCESS: System repair chain completed. Reboot before continuing." -ForegroundColor Green }
    ```
 
 3. Let it finish without closing the window. This can take several minutes; DISM pauses at the
@@ -133,8 +116,6 @@ redistributables a 64-bit Windows install is not a substitute for the x86 packag
 
 3. Download and install the
    [.NET Framework 4.8.1 web installer](https://dotnet.microsoft.com/en-us/download/dotnet-framework/thank-you/net481-web-installer).
-
-   You only need the Framework and the two VC++ packages - the .NET SDK is not required.
 
 4. Use the installers' defaults. There's no need to customise components.
 
