@@ -708,12 +708,17 @@ form input[type="checkbox"]:checked::after {
 }
 
 #progWrap {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 6px;
   width: 100%;
   max-width: 760px;
   margin-top: 10px;
+}
+
+/* The hidden attribute (set by setProgress/hideProgress) is the only switch. */
+#progWrap[hidden] {
+  display: none;
 }
 
 .phdr {

@@ -319,17 +319,16 @@ function dlHash() {
 }
 function copyLink(btn) {
   navigator.clipboard.writeText(getLink());
-  if (!btn || btn._copying) return;
-  btn._copying = true;
-  const orig = btn.innerHTML;
+  if (!btn) return;
+  btn._orig ??= btn.innerHTML;
   btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
   btn.style.color = "var(--amethyst)";
   btn.style.borderColor = "rgba(157,78,221,0.3)";
   btn.style.background = "rgba(157,78,221,0.07)";
-  setTimeout(() => {
-    btn.innerHTML = orig;
+  clearTimeout(btn._timer);
+  btn._timer = setTimeout(() => {
+    btn.innerHTML = btn._orig;
     btn.style.color = btn.style.borderColor = btn.style.background = "";
-    btn._copying = false;
   }, 2000);
 }
 
@@ -500,7 +499,7 @@ let _progressStartTime = null;
 function setProgress(percentage, message) {
   if (!_progressStartTime) _progressStartTime = Date.now();
 
-  progWrap.style.display = "flex";
+  progWrap.hidden = false;
   progFill.style.width = percentage + "%";
   progPct.textContent = percentage + "%";
   progMsg.textContent = message;
@@ -524,7 +523,7 @@ function setProgress(percentage, message) {
 
 // Function to hide the progress bar
 function hideProgress() {
-  progWrap.style.display = "none";
+  progWrap.hidden = true;
   progFill.style.width = "0%";
   progPct.textContent = "0%";
   progEta.textContent = "";
@@ -534,11 +533,21 @@ function hideProgress() {
 
 // Prompt download
 function saveFile(fileName, data, mimeType = "application/zip") {
+  // One Redownload button per page: drop the previous one and its blob URL so a
+  // second run in the same tab cannot offer a stale archive.
+  if (document.body.dataset.redownloadUrl) {
+    URL.revokeObjectURL(document.body.dataset.redownloadUrl);
+    delete document.body.dataset.redownloadUrl;
+  }
+  document.querySelectorAll(".redownload-btn, .redownload-link").forEach((node) => node.remove());
+
   const blob = new Blob([data], { type: mimeType });
 
   let link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
+  document.body.dataset.redownloadUrl = link.href;
   link.download = fileName;
+  link.className = "redownload-link";
   link.style.cssText = "display:none";
 
   let button = document.createElement("button");
@@ -743,6 +752,7 @@ async function main() {
         "\n\n",
       );
 
+      formDiv.hidden = false;
       log(usageMsg, "\n", false);
       return;
     }
@@ -752,7 +762,10 @@ async function main() {
     if (compressZip !== "true" && compressZip !== "false") {
       log(
         `[!] Error: The \`compressZip\` query must be a boolean ("true" or "false"), got "${compressZip}"`,
+        "\n\n",
       );
+      log(usageMsg, "\n", false);
+      return;
     }
 
     compressZip = compressZip === "true";
@@ -760,21 +773,22 @@ async function main() {
     compressZip = form.compressZip.checked;
   }
 
-  if (compressionLevel !== "") {
-    try {
-      compressionLevel = parseInt(compressionLevel);
-    } catch (err) {
-      log(
-        `[!] Error: Failed to parse \`compressionLevel\` query: ${error}`,
-        "\n\n",
-      );
-      log(usageMsg, "\n", false);
-      return;
-    }
+  parallelDownloads =
+    parallelDownloads === null
+      ? form.parallelDownloads.checked
+      : parallelDownloads === "true";
 
-    if (compressionLevel > 9 || compressionLevel < 1) {
+  if (compressionLevel !== null) {
+    const compressionLevelRaw = compressionLevel;
+    compressionLevel = Number.parseInt(compressionLevelRaw, 10);
+
+    if (
+      !Number.isInteger(compressionLevel) ||
+      compressionLevel > 9 ||
+      compressionLevel < 1
+    ) {
       log(
-        `[!] Error: The \`compressionLevel\` query must be a value between 1 and 9, got ${compressionLevel}`,
+        `[!] Error: The \`compressionLevel\` query must be a value between 1 and 9, got ${compressionLevelRaw}`,
         "\n\n",
       );
       log(usageMsg, "\n", false);
@@ -795,6 +809,7 @@ async function main() {
       "[!] Error: Missing required \`binaryType\` query, are you using an old perm link for a specific version?",
       "\n\n",
     );
+    formDiv.hidden = false;
     log(usageMsg, "\n", false);
     return;
   }
@@ -933,7 +948,7 @@ async function fetchManifest() {
       return;
     }
 
-    const useParallel = parallelDownloads !== "false";
+    const useParallel = parallelDownloads;
     dlPackages(manifestBody, useParallel);
   }
 }
@@ -949,6 +964,7 @@ async function dlPackages(
     log(
       `[!] Error: unknown rbxPkgManifest format version; expected "v0", got "${pkgManifestLines[0]}"`,
     );
+    hideProgress();
     return;
   }
 
@@ -958,6 +974,7 @@ async function dlPackages(
       log(
         `[!] Error: BinaryType \`${binaryType}\` given, but "RobloxApp.zip" was found in the manifest!`,
       );
+      hideProgress();
       return;
     }
   } else if (pkgManifestLines.includes("RobloxStudio.zip")) {
@@ -966,10 +983,12 @@ async function dlPackages(
       log(
         `[!] Error: BinaryType \`${binaryType}\` given, but "RobloxStudio.zip" was found in the manifest!`,
       );
+      hideProgress();
       return;
     }
   } else {
     log("[!] Error: Bad/unrecognized rbxPkgManifest, aborting..");
+    hideProgress();
     return;
   }
 
@@ -979,6 +998,7 @@ async function dlPackages(
     await ensureJSZip();
   } catch (error) {
     log(`[!] ${error.message}`);
+    hideProgress();
     return;
   }
   zip = new JSZip();
@@ -1064,6 +1084,7 @@ async function dlPackages(
       await Promise.all(downloadPromises);
     } catch {
       log(`[!] One or more packages failed to download, aborting.`);
+      hideProgress();
       return;
     }
   } else {
@@ -1088,6 +1109,7 @@ async function dlPackages(
       } catch (err) {
         log(`[!] Error downloading "${packageName}": ${err.message}`);
         logWarpHint();
+        hideProgress();
         return;
       }
     }
@@ -1128,6 +1150,11 @@ async function dlPackages(
         log(`[+] Done! Completed in ${elapsed}s`);
         hideProgress();
         saveFile(outputFileName, outputZipData);
+      })
+      .catch((err) => {
+        log(`[!] Export failed: ${err.message}`);
+        logWarpHint();
+        hideProgress();
       });
   }
 }

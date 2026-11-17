@@ -517,14 +517,7 @@ def is_compiled() -> bool:
 
 
 def is_unpack_folder(folder: Path) -> bool:
-    """True for Nuitka/PyInstaller onefile scratch dirs under %TEMP%."""
-    try:
-        cased = os.path.normcase(os.path.abspath(folder))
-        temp = os.path.normcase(os.path.abspath(tempfile.gettempdir()))
-    except OSError:
-        return False
-    if cased == temp or cased.startswith(temp + os.sep):
-        return True
+    """True for Nuitka/PyInstaller onefile scratch dirs (%TEMP%\\onefile_*, %TEMP%\\_MEI*)."""
     return any(part.lower().startswith(("onefile_", "_mei")) for part in folder.parts)
 
 
@@ -675,16 +668,17 @@ def defender_exclusions() -> list[str]:
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
-def add_defender_exclusion(folder: Path, *, dry_run: bool) -> None:
+def add_defender_exclusion(folder: Path, *, dry_run: bool) -> bool:
+    """Add the exclusion; True when it is (or would be) in place."""
     info(f"\n[Exclusion] {folder}")
     if dry_run:
         info("  would add a Windows Defender folder exclusion")
-        return
+        return True
     require_admin("add the Defender exclusion")
     try:
         if any(same_folder(entry, folder) for entry in defender_exclusions()):
             info("  already excluded")
-            return
+            return True
     except SetupError as exc:
         warn(f"cannot read Defender's exclusion list ({exc}); trying to add it anyway")
     quoted = str(folder).replace("'", "''")
@@ -692,41 +686,53 @@ def add_defender_exclusion(folder: Path, *, dry_run: bool) -> None:
     if result.returncode != 0:
         detail = (result.stderr or result.stdout).strip() or f"exit code {result.returncode}"
         warn(f"could not add the exclusion ({detail}); add {folder} in Windows Security by hand")
-        return
+        return False
     try:
         verified = any(same_folder(entry, folder) for entry in defender_exclusions())
     except SetupError:
         verified = False
     info("  added and verified" if verified else "  added (Windows Security may take a moment to list it)")
+    return verified
 
 
-def repair_system_files(*, dry_run: bool) -> None:
+def repair_system_files(*, dry_run: bool) -> bool:
+    """Run SFC and DISM; True only when a tool asked for a reboot."""
     info("\n[Repair] Windows component store")
     info("  this is the slow part - SFC and DISM each take several minutes")
     for name, executable, arguments in REPAIR_CHAIN:
         info(f"  ==> {name}: {executable} {' '.join(arguments)}")
     if dry_run:
-        return
+        return False
     require_admin("run SFC and DISM")
+    needs_reboot = False
     for name, executable, arguments in REPAIR_CHAIN:
         try:
             result = subprocess.run([executable, *arguments], check=False)
         except OSError as exc:
             raise SetupError(f"cannot run {executable}: {exc}") from exc
-        if result.returncode not in (0, 3010):
+        if result.returncode == 3010:
+            needs_reboot = True
+        elif result.returncode != 0:
             raise SetupError(
                 f"{name} failed with exit code {result.returncode}; "
                 "repair the component store before installing SirHurt"
             )
-    info("  repair chain finished; reboot before the first launch")
+    info(
+        "  repair chain finished; reboot before the first launch"
+        if needs_reboot
+        else "  repair chain finished (no reboot needed)"
+    )
+    return needs_reboot
 
 
-def install_runtimes(*, dry_run: bool) -> None:
+def install_runtimes(*, dry_run: bool) -> bool:
+    """Install VC++ and .NET; True only when an installer asked for a reboot."""
     info("\n[Runtimes] Visual C++ x86, Visual C++ x64, .NET Framework 4.8.1")
     for name, url, arguments in RUNTIMES:
         info(f"  {name}: {url} {' '.join(arguments)}")
     if dry_run:
-        return
+        return False
+    codes: list[int] = []
     with tempfile.TemporaryDirectory(prefix="sirhurt-runtimes-") as scratch:
         for name, url, arguments in RUNTIMES:
             info(f"\n  {name}: downloading")
@@ -737,13 +743,21 @@ def install_runtimes(*, dry_run: bool) -> None:
                 result = subprocess.run([str(installer), *arguments], check=False)
             except OSError as exc:
                 raise SetupError(f"cannot run {name}: {exc}") from exc
+            codes.append(result.returncode)
             if result.returncode == 1638:
                 info("    a newer version is already installed")
             elif result.returncode == 3010:
                 warn(f"    {name} installed; it needs a reboot to finish")
             elif result.returncode not in RUNTIME_OK_CODES:
                 raise SetupError(f"{name} failed with exit code {result.returncode}")
-    info("  runtimes installed; reboot before the first launch")
+    needs_reboot = 3010 in codes
+    if needs_reboot:
+        info("  runtimes installed; reboot before the first launch")
+    elif all(code == 1638 for code in codes):
+        info("  runtimes already up to date (no reboot needed)")
+    else:
+        info("  runtimes installed (no reboot needed)")
+    return needs_reboot
 
 
 # --------------------------------------------------------------------------- #
@@ -811,11 +825,10 @@ def cleaner_executable(target: Path) -> Path | None:
     folder = target / SIRSTRAP_CLEANER_FOLDER
     if not folder.is_dir():
         return None
-    executables = sorted(folder.rglob("*.exe"))
-    for executable in executables:
+    for executable in sorted(folder.rglob("*.exe")):
         if "cleaner" in executable.name.lower():
             return executable
-    return executables[0] if executables else None
+    return None
 
 
 def install_cleaner(target: Path, *, dry_run: bool) -> None:
@@ -1008,6 +1021,7 @@ def unpack_nested_archives(destination: Path, *, depth: int = 2) -> None:
     a Box share wraps that folder - and the same zip - one level down, so the
     nested copy is unpacked next to itself to leave the same usable layout.
     """
+    seen: set[Path] = set()
     for _ in range(depth):
         if any(destination.rglob("*.exe")):
             return
@@ -1015,11 +1029,15 @@ def unpack_nested_archives(destination: Path, *, depth: int = 2) -> None:
         if not nested:
             return
         for archive in nested:
+            if archive in seen:
+                continue
             info(f"  unpacking nested {archive.relative_to(destination).as_posix()}")
             safe_extract_zip(archive, archive.parent)
+            seen.add(archive)
 
 
-def extract_sirhurt(archive: Path, target: Path) -> None:
+def extract_sirhurt(archive: Path, target: Path) -> Path | None:
+    """Extract archive into <target>/sirhurt; the .exe found there, or None."""
     destination = target / "sirhurt"
     if archive.suffix.lower() == ".zip" and zipfile.is_zipfile(archive):
         safe_extract_zip(archive, destination)
@@ -1027,11 +1045,12 @@ def extract_sirhurt(archive: Path, target: Path) -> None:
         executables = sorted(path.relative_to(destination).as_posix() for path in destination.rglob("*.exe"))
         suffix = f" ({', '.join(executables)})" if executables else ""
         info(f"  extracted to {destination}{suffix}")
-        return
+        return next(destination.rglob("*.exe"), None)
     destination.mkdir(parents=True, exist_ok=True)
     shutil.copy2(archive, destination / archive.name)
     info(f"  {archive.name} isn't a zip; copied it to {destination}")
     info(f"  extract it manually with 7-Zip or WinRAR into {destination}")
+    return None
 
 
 def install_sirhurt(target: Path, link: tuple[str, str, str]) -> None:
@@ -1124,7 +1143,8 @@ def configure_roblox_settings(*, dry_run: bool) -> None:
         action = "would create" if dry_run else "creating"
         info(f"  no appStorage.json yet - {action} one with both settings off")
 
-    if str(settings.get("IsFirstLaunchAfterInstall", "")).lower() == "true":
+    first_launch = str(settings.get("IsFirstLaunchAfterInstall", "")).lower() == "true"
+    if first_launch:
         warn(
             "Roblox has not completed a first launch on this profile yet - it rewrites "
             "appStorage.json on start, so re-run this stage after opening Roblox once"
@@ -1133,12 +1153,16 @@ def configure_roblox_settings(*, dry_run: bool) -> None:
     changed = False
     for key, disabled in ROBLOX_SETTINGS.items():
         current = settings.get(key)
-        # Roblox stores these as the strings "true"/"false"; keep that shape.
-        desired: object = disabled if isinstance(current, str) or current is None else not bool(current)
+        # Roblox stores these as the strings "true"/"false"; keep that shape. A
+        # boolean or a number from another writer is replaced, not inverted.
+        desired: str = disabled
         if current == desired:
             info(f"  {key}: already {disabled}")
             continue
-        info(f"  {key}: {current!r} -> {desired!r}")
+        if isinstance(current, str):
+            info(f"  {key}: {current!r} -> {desired!r}")
+        else:
+            info(f"  {key}: {current!r} (non-string) -> {desired!r}")
         settings[key] = desired
         changed = True
     if not changed:
@@ -1162,9 +1186,11 @@ def configure_roblox_settings(*, dry_run: bool) -> None:
 
     backup = path.with_name(path.name + ".bak")
     partial = path.with_name(path.name + ".part")
+    created_backup = False
     try:
         if path.is_file() and not backup.exists():
             shutil.copy2(path, backup)
+            created_backup = True
         partial.write_text(json.dumps(settings, separators=(",", ":")), encoding="utf-8")
         os.replace(partial, path)
     except OSError as exc:
@@ -1183,7 +1209,17 @@ def configure_roblox_settings(*, dry_run: bool) -> None:
     ]
     if still_on:
         raise SetupError(f"{path} still reports {', '.join(still_on)} as enabled")
-    info(f"  saved and verified (backup: {backup.name})" if backup.exists() else "  saved and verified")
+    if first_launch:
+        info(
+            "  saved, but Roblox rewrites this file on its next start - "
+            "re-run this stage after opening Roblox once"
+        )
+    elif created_backup:
+        info(f"  saved and verified (backup: {backup.name})")
+    elif backup.exists():
+        info(f"  saved and verified (kept existing backup: {backup.name})")
+    else:
+        info("  saved and verified")
 
 
 # --------------------------------------------------------------------------- #
@@ -1307,7 +1343,14 @@ def pause_before_exit() -> None:
         pass
 
 
-def summarize(target: Path, *, reboot_expected: bool, cleaned: bool, sirhurt_installed: bool) -> None:
+def summarize(
+    target: Path,
+    *,
+    reboot_expected: bool,
+    cleaned: bool,
+    bootstrapper: Path | None,
+    exclusion_ok: bool | None,
+) -> None:
     info("\nDone. Layout:")
     for entry in sorted(target.iterdir(), key=lambda path: path.name.lower()):
         info(f"  {entry.name}{os.sep if entry.is_dir() else ''}")
@@ -1317,12 +1360,17 @@ def summarize(target: Path, *, reboot_expected: bool, cleaned: bool, sirhurt_ins
         info("\nThe cleaner removed stored SirHurt data - you'll need to log in again.")
     if (target / "README.txt").is_file():
         info(f"Next steps are also in {target / 'README.txt'}.")
-    if sirhurt_installed:
+    if exclusion_ok is False:
+        info(
+            f"\nThe Defender exclusion was not confirmed - add {target} in Windows Security by hand."
+        )
+    if bootstrapper is not None:
         info("Next: stage 4 of the guide - launch Roblox, join a game, then run the SirHurt loader")
         info("      as Administrator: https://sirhurt.pages.dev/guide/injection/")
     else:
         info("\nSirHurt itself wasn't installed - get it from https://sirhurt.net/login/download.php")
         info(f"and extract it into {target / 'sirhurt'}, then run its bootstrapper as Administrator.")
+        info(f"  no .exe under {target / 'sirhurt'} - extract the archive you downloaded into that folder")
 
 
 def run(args: argparse.Namespace, *, survey: bool) -> int:
@@ -1341,18 +1389,30 @@ def run(args: argparse.Namespace, *, survey: bool) -> int:
         and args.skip_runtimes
         and args.skip_roblox_settings
         and not args.run_cleaner
+        and not args.reboot
     ):
-        raise SetupError("nothing to do: every stage was skipped")
+        raise SetupError("nothing to do: every stage was skipped and --reboot was not given")
+    if args.dry_run and not is_admin() and (
+        not args.skip_exclusions or not args.skip_repair or args.run_cleaner
+    ):
+        warn(
+            "the real run needs Administrator for those stages; the dry run cannot show that failure"
+        )
     target = resolve_target(args.dir, dry_run=args.dry_run)
+    # adopt_local_archive moves the archive into <target>/downloads before the
+    # later stages run, so an aborted run must not lose sight of it.
+    folders = search_directories()
+    downloads = target / "downloads"
+    if downloads.is_dir() and downloads not in folders:
+        folders.append(downloads)
 
     local_archive: Path | None = None
-    if not args.skip_sirhurt:
+    if not args.skip_sirhurt and not args.link:
         if args.archive:
             local_archive = Path(args.archive).expanduser()
             if not local_archive.is_file():
                 raise SetupError(f"no such archive: {local_archive}")
         elif not args.no_local_archive:
-            folders = search_directories()
             local_archive = find_local_archive(folders)
             if local_archive is None:
                 searched = " or ".join(str(folder) for folder in folders)
@@ -1364,21 +1424,25 @@ def run(args: argparse.Namespace, *, survey: bool) -> int:
                         # 's' (or end of input) skips SirHurt - no link prompt.
                         args.skip_sirhurt = True
 
+    exclusion_ok: bool | None = None
     if not args.skip_exclusions:
-        add_defender_exclusion(target, dry_run=args.dry_run)
+        exclusion_ok = add_defender_exclusion(target, dry_run=args.dry_run)
     if local_archive is not None:
         adopt_local_archive(local_archive, target, dry_run=args.dry_run)
+    repair_needs_reboot = False
     if not args.skip_repair:
-        repair_system_files(dry_run=args.dry_run)
+        repair_needs_reboot = repair_system_files(dry_run=args.dry_run)
+    runtimes_need_reboot = False
     if not args.skip_runtimes:
-        install_runtimes(dry_run=args.dry_run)
+        runtimes_need_reboot = install_runtimes(dry_run=args.dry_run)
     if not args.skip_sirstrap:
         tag = resolve_sirstrap_tag()
         info(f"\nSirstrap release: {tag}")
         install_sirstrap(target, tag, dry_run=args.dry_run)
     if args.run_cleaner:
-        if args.skip_sirstrap:
-            install_cleaner(target, dry_run=args.dry_run)
+        # The Cleaner lives in the Sirstrap release, so --skip-sirstrap does not
+        # cover it; install_cleaner returns early when it is already there.
+        install_cleaner(target, dry_run=args.dry_run)
         run_sirhurt_cleaner(target, dry_run=args.dry_run)
     if not args.skip_sirhurt and local_archive is None:
         link = resolve_sirhurt_link(args.link, dry_run=args.dry_run)
@@ -1399,11 +1463,16 @@ def run(args: argparse.Namespace, *, survey: bool) -> int:
     else:
         if not args.skip_sirhurt:
             write_next_steps(target)
+        sirhurt_folder = target / "sirhurt"
+        bootstrapper = (
+            next(sirhurt_folder.rglob("*.exe"), None) if sirhurt_folder.is_dir() else None
+        )
         summarize(
             target,
-            reboot_expected=not (args.skip_repair and args.skip_runtimes),
+            reboot_expected=repair_needs_reboot or runtimes_need_reboot,
             cleaned=args.run_cleaner,
-            sirhurt_installed=not args.skip_sirhurt,
+            bootstrapper=bootstrapper,
+            exclusion_ok=exclusion_ok,
         )
         if args.reboot:
             schedule_reboot(dry_run=False)
@@ -1416,7 +1485,11 @@ def main(argv: list[str] | None = None) -> int:
     raw = list(sys.argv[1:] if argv is None else argv)
     if should_elevate(raw):
         if elevate(raw):
-            print("relaunching as Administrator ...", file=sys.stderr)
+            print(
+                "relaunching as Administrator ... (this process exits 0 once the UAC prompt is "
+                "answered; the elevated copy does the work)",
+                file=sys.stderr,
+            )
             return 0
         print(
             "error: this setup needs Administrator rights - accept the UAC prompt, or run it "
