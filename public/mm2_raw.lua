@@ -2450,6 +2450,7 @@ local function startAutoRejoin()
 
     autoRejoinErrorConn = GuiService.ErrorMessageChanged:Connect(function(msg)
         if not getgenv().AutoRejoin or not msg or msg == "" then return end
+        if msg == "DisconnectClientInitiated" then return end
         attemptServerHop(4, "Roblox error: " .. tostring(msg))
     end)
 
@@ -3487,6 +3488,102 @@ SettingsTab:AddButton({
 })
 
 
+SettingsTab:AddSection("Theming")
+
+local themesDD = SettingsTab:AddDropdown({
+    Name = "Set Theme",
+    Flag = "UITheme",
+    Options = Verdant:GetThemes(),
+    Callback = function(theme) Verdant:SetTheme(theme) end,
+})
+
+SettingsTab:AddButton({
+    Name = "Refresh Themes",
+    Description = "Refresh the theme list loaded in this session",
+    Callback = function()
+        themesDD:Refresh(Verdant:GetThemes(), true)    
+    end,
+})
+
+-- now for custom themes
+pcall(makefolder, "Verdant/Themes")
+
+local exampletheme = [[
+--!! ThemeName: Example
+return {
+Paper = Color3.fromRGB(14, 30, 42),      -- page background
+Raised = Color3.fromRGB(22, 42, 56),     -- hover tint, cards, dialogs
+Overlay = Color3.fromRGB(0, 0, 0),       -- dimmed background behind dialogs
+Rule = Color3.fromRGB(46, 72, 88),       -- hairlines
+
+-- Text
+Ink = Color3.fromRGB(232, 242, 246),     -- primary text
+InkMuted = Color3.fromRGB(164, 188, 198), -- descriptions and secondary text
+InkFaint = Color3.fromRGB(106, 132, 146), -- placeholders
+
+-- Accent
+Accent = Color3.fromRGB(86, 204, 214),
+OnAccent = Color3.fromRGB(14, 30, 42),   -- text on buttons with an accent
+
+-- Status
+Success = Color3.fromRGB(110, 214, 160),
+Info = Color3.fromRGB(130, 186, 240),
+Warning = Color3.fromRGB(236, 196, 110),
+Danger = Color3.fromRGB(236, 112, 104),
+
+-- Optional
+SerifFamily = "rbxasset://fonts/families/Merriweather.json",
+SansFamily = "rbxasset://fonts/families/SourceSansPro.json",
+Rounding = 0.5,          -- corner rounding multiplier (0 = square)
+PaperTransparency = 0,
+Season = false,          -- "Frosted" or "Hallows" adds that theme's decorations
+ShadowImage = "rbxassetid://6014261993",
+ClickSound = "rbxassetid://139719503904449",
+NotifySound = "rbxassetid://6644702473",
+}
+
+ 
+-- (Don't copy these 2 lines into your custom theme, otherwise they will be ignored by Verdant at runtime) 
+--!! VERDANTIGNORE !!--
+]]
+
+
+if not isfile("Verdant/Themes/example.luau") then 
+    writefile("Verdant/Themes/example.luau", exampletheme)
+end
+local customThemesLoaded = 0
+for _, themePath in listfiles("Verdant/Themes") do
+    if isfolder(themePath) then continue end
+
+    local contents = readfile(themePath)
+    if not contents then continue end
+    if string.find(contents, "--!! VERDANTIGNORE !!--", 1, true) then continue end
+    local themeName = string.match(contents, "%-%-!+%s*ThemeName:%s*([^\r\n]+)")
+    local cleanSrc  = contents:gsub("^%-%-!%s*ThemeName:[^\r\n]*[\r\n]?", "")
+    local chunk, err = loadstring(cleanSrc, "=" .. themePath)
+    if not chunk then
+        warn("[Verdant]: Syntax error in " .. themePath .. ": " .. tostring(err))
+        continue
+    end
+    local ok, themeTable = pcall(chunk)
+    if not ok or type(themeTable) ~= "table" then
+        warn("[Verdant]: " .. themePath .. " has invalid syntax!")
+        continue
+    end
+    Verdant:AddTheme(themeName, themeTable)
+    print("[Verdant]: Processed theme file " .. tostring(themePath))
+    customThemesLoaded += 1
+    task.wait(0.5)
+end
+
+Window:OnClose(function()
+    getgenv().VerdantLoaded = false 
+end)
+
+-- final reload to ensure all themes are locked in 
+
+themesDD:Refresh(Verdant:GetThemes(), true)
+
 if isfile and isfile(configFile) then
     local ok, data = pcall(readfile, configFile)
     if ok and data then
@@ -3506,3 +3603,5 @@ end
 
 
 Verdant:Notify({ Title = "Verdant", Content = "Loaded :) Welcome to Verdant", Type = "Success", Duration = 2 })
+task.wait(3)
+if customThemesLoaded > 0 then Verdant:Notify({ Title = "Verdant", Content = "Loaded " .. customThemesLoaded.. " theme(s) successfully!", Type = "Success", Duration = 2 }) end 

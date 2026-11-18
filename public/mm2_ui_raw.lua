@@ -20,10 +20,6 @@ Library.Settings = {
 	ClickVolume = 0.2,
 }
 
---------------------------------------------------------------------------------
--- Themes
---------------------------------------------------------------------------------
-
 local Forest = {
 	Paper = Color3.fromRGB(20, 38, 30), -- page background
 	Raised = Color3.fromRGB(27, 48, 38), -- hover tint, cards, dialogs
@@ -43,6 +39,8 @@ local Forest = {
 	SerifFamily = "rbxasset://fonts/families/Merriweather.json",
 	SansFamily = "rbxasset://fonts/families/SourceSansPro.json",
 	Rounding = 0.5, -- corner rounding multiplier (0 = square)
+	PaperTransparency = 0,
+	Season = false, -- key into Seasons; false (not nil) so switching theme clears it
 
 	ShadowImage = "rbxassetid://6014261993",
 	ClickSound = "rbxassetid://139719503904449",
@@ -100,6 +98,40 @@ Library.Themes = {
 		OnAccent = Color3.fromRGB(17, 19, 18),
 		Success = Color3.fromRGB(124, 204, 146),
 	}),
+	Frosted = extend(Forest, {
+		Paper = Color3.fromRGB(18, 30, 46),
+		Raised = Color3.fromRGB(28, 44, 64),
+		Ink = Color3.fromRGB(236, 244, 250),
+		InkMuted = Color3.fromRGB(170, 192, 212),
+		InkFaint = Color3.fromRGB(112, 136, 160),
+		Rule = Color3.fromRGB(54, 78, 102),
+		Accent = Color3.fromRGB(158, 216, 240),
+		OnAccent = Color3.fromRGB(18, 30, 46),
+		Overlay = Color3.fromRGB(4, 10, 20),
+		Success = Color3.fromRGB(120, 210, 150),
+		Info = Color3.fromRGB(150, 196, 240),
+		Warning = Color3.fromRGB(240, 208, 130),
+		Danger = Color3.fromRGB(232, 96, 106),
+		Rounding = 0.75,
+		PaperTransparency = 0.06,
+		Season = "Frosted",
+	}),
+	Hallows = extend(Forest, {
+		Paper = Color3.fromRGB(22, 16, 28),
+		Raised = Color3.fromRGB(34, 25, 42),
+		Ink = Color3.fromRGB(244, 232, 214),
+		InkMuted = Color3.fromRGB(186, 168, 176),
+		InkFaint = Color3.fromRGB(124, 106, 124),
+		Rule = Color3.fromRGB(62, 46, 70),
+		Accent = Color3.fromRGB(244, 140, 44),
+		OnAccent = Color3.fromRGB(22, 16, 28),
+		Success = Color3.fromRGB(170, 210, 90),
+		Info = Color3.fromRGB(170, 140, 230),
+		Warning = Color3.fromRGB(245, 190, 70),
+		Danger = Color3.fromRGB(226, 70, 70),
+		Rounding = 0.25,
+		Season = "Hallows",
+	}),
 }
 
 local Theme = table.clone(Forest)
@@ -134,10 +166,6 @@ local function onThemeChanged(owner, fn)
 	table.insert(Refreshers, { Owner = owner, Fn = fn })
 end
 
---------------------------------------------------------------------------------
--- Helpers
---------------------------------------------------------------------------------
-
 local Window = {}
 Window.__index = Window
 
@@ -147,12 +175,12 @@ Tab.__index = Tab
 local Element = {}
 Element.__index = Element
 
-local MASTHEAD = 62
-local DOUBLE_RULE = 5
-local TABSTRIP = 38
-local CONTENT_TOP = MASTHEAD + DOUBLE_RULE + TABSTRIP + 1
-local ROW_INSET = 10 -- horizontal inset of row content inside the hover tint
-local OPTION_HEIGHT = 32
+local mastheadHeight = 50
+local doubleRuleHeight = 5
+local tabStripHeight = 32
+local contentTop = mastheadHeight + doubleRuleHeight + tabStripHeight + 1
+local rowInset = 10 -- horizontal inset of row content inside the hover tint
+local optionHeight = 28
 
 local function create(className, props, children)
 	local inst = Instance.new(className)
@@ -301,7 +329,6 @@ local function text(props)
 	return create(className, base)
 end
 
--- An underlined text link: the underline draws in from the left on hover.
 local function link(props)
 	local normalKey = props.Color or "InkMuted"
 	local hoverKey = props.HoverColor or "Ink"
@@ -416,6 +443,26 @@ local function getPlayerGui()
 	return LocalPlayer:WaitForChild("PlayerGui")
 end
 
+-- Other scripts can attach a UIScale to any ScreenGui. Pinning it (rather than destroying it)
+-- keeps our size consistent without breaking a script that still holds a reference to it.
+local function pinScale(gui)
+	local function pin(child)
+		if not child:IsA("UIScale") then
+			return
+		end
+		child.Scale = 1
+		child:GetPropertyChangedSignal("Scale"):Connect(function()
+			if child.Scale ~= 1 then
+				child.Scale = 1
+			end
+		end)
+	end
+	for _, child in ipairs(gui:GetChildren()) do
+		pin(child)
+	end
+	gui.ChildAdded:Connect(pin)
+end
+
 local function clockTime()
 	return os.date("%H:%M")
 end
@@ -439,11 +486,232 @@ local function dropVeil(veil, duration)
 	return tween(veil, { BackgroundTransparency = 0 }, duration or 0.2, Enum.EasingStyle.Quad)
 end
 
---------------------------------------------------------------------------------
--- Library API
---------------------------------------------------------------------------------
+local function dot(parent, size, colorKey)
+	local frame = rule({ Size = UDim2.fromOffset(size, size), Color = colorKey, Parent = parent })
+	corner("full").Parent = frame
+	return frame
+end
+
+-- A full-width band along the top (edge 0) or bottom (edge 1) that fades vertically.
+local function glaze(parent, colorKey, edge, height, fromTransparency, toTransparency)
+	return create("Frame", {
+		AnchorPoint = Vector2.new(0, edge),
+		Position = UDim2.fromScale(0, edge),
+		Size = UDim2.new(1, 0, 0, height),
+		BorderSizePixel = 0,
+		Theme = { BackgroundColor3 = colorKey },
+		Parent = parent,
+	}, {
+		create("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(fromTransparency, toTransparency) }),
+	})
+end
+
+local function strand(parent, from, to)
+	local delta = to - from
+	return rule({
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset((from.X + to.X) / 2, (from.Y + to.Y) / 2),
+		Size = UDim2.fromOffset(delta.Magnitude, 1),
+		Rotation = math.deg(math.atan2(delta.Y, delta.X)),
+		Color = "InkFaint",
+		BackgroundTransparency = 0.55,
+		Parent = parent,
+	})
+end
+
+-- `anchor` picks the window corner, e.g. Vector2.new(1, 0) for top right.
+local function cobweb(parent, anchor, size)
+	local holder = create("Frame", {
+		AnchorPoint = anchor,
+		Position = UDim2.fromScale(anchor.X, anchor.Y),
+		Size = UDim2.fromOffset(size, size),
+		BackgroundTransparency = 1,
+		Parent = parent,
+	})
+	local origin = Vector2.new(anchor.X * size, anchor.Y * size)
+	local function point(angle, radius)
+		return origin + Vector2.new(math.cos(angle) * (1 - 2 * anchor.X), math.sin(angle) * (1 - 2 * anchor.Y)) * radius
+	end
+	local spokes = 5
+	local step = (math.pi / 2) / (spokes - 1)
+	for i = 0, spokes - 1 do
+		strand(holder, origin, point(i * step, size))
+	end
+	for _, ring in ipairs({ 0.4, 0.68, 0.95 }) do
+		local radius = ring * size
+		for i = 0, spokes - 2 do
+			local sag = point((i + 0.5) * step, radius * 0.88)
+			strand(holder, point(i * step, radius), sag)
+			strand(holder, sag, point((i + 1) * step, radius))
+		end
+	end
+end
+
+-- Frames can't taper, so an icicle is a stack of narrowing segments, longest at the thin tip.
+local function icicle(parent, x, width, length)
+	local holder = create("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(x, 0),
+		Size = UDim2.fromOffset(width, length),
+		BackgroundTransparency = 1,
+		Parent = parent,
+	})
+	local top = 0
+	for segmentWidth = width, 1, -1 do
+		local bottom = math.ceil(length * (1 - ((segmentWidth - 1) / width) ^ 0.7))
+		if bottom > top then
+			rule({
+				Position = UDim2.fromOffset(math.floor((width - segmentWidth) / 2), top),
+				Size = UDim2.fromOffset(segmentWidth, bottom - top),
+				Color = "Accent",
+				BackgroundTransparency = 0.1 + (top / length) * 0.4,
+				Parent = holder,
+			})
+			top = bottom
+		end
+	end
+	rule({
+		Position = UDim2.fromOffset(math.floor(width / 2) - 1, 0),
+		Size = UDim2.fromOffset(1, math.floor(length * 0.4)),
+		Color = "Ink",
+		BackgroundTransparency = 0.35,
+		ZIndex = 2,
+		Parent = holder,
+	})
+end
+
+-- Each builder decorates a layer behind the page content and returns step(dt, time).
+local Seasons = {}
+
+function Seasons.Frosted(layer)
+	glaze(layer, "Accent", 0, 90, 0.8, 1)
+	glaze(layer, "Ink", 1, 34, 1, 0.84)
+
+	rule({ Size = UDim2.new(1, 0, 0, 3), Color = "Ink", BackgroundTransparency = 0.3, Parent = layer })
+
+	-- Seeded so the icicles keep their shape when the theme is switched back and forth.
+	local shape = Random.new(25)
+	local icicles = 26
+	for i = 1, icicles do
+		local long = shape:NextNumber() < 0.3
+		icicle(
+			layer,
+			(i - 0.5 + shape:NextNumber(-0.35, 0.35)) / icicles,
+			long and shape:NextInteger(5, 6) or shape:NextInteger(3, 4),
+			long and shape:NextInteger(16, 24) or shape:NextInteger(7, 14)
+		)
+	end
+
+	local rng = Random.new()
+	local flakes = {}
+	for i = 1, 26 do
+		local depth = rng:NextNumber()
+		local flake = dot(layer, 2 + math.round(depth * 2), "Ink")
+		flake.BackgroundTransparency = 0.7 - depth * 0.4
+		flakes[i] = {
+			Frame = flake,
+			X = rng:NextNumber(),
+			Y = rng:NextNumber(),
+			Fall = 0.03 + depth * 0.07,
+			Sway = rng:NextNumber(0.004, 0.012),
+			Phase = rng:NextNumber(0, math.pi * 2),
+		}
+	end
+
+	return function(dt, time)
+		for _, flake in ipairs(flakes) do
+			flake.Y += flake.Fall * dt
+			if flake.Y > 1.03 then
+				flake.Y = -0.03
+				flake.X = rng:NextNumber()
+			end
+			flake.Frame.Position = UDim2.fromScale(flake.X + math.sin(time + flake.Phase) * flake.Sway, flake.Y)
+		end
+	end
+end
+
+function Seasons.Hallows(layer)
+	cobweb(layer, Vector2.new(1, 0), 84)
+	cobweb(layer, Vector2.new(0, 1), 64)
+	local glow = glaze(layer, "Accent", 1, 80, 1, 0.8)
+
+	local rng = Random.new()
+	local embers = {}
+	for i = 1, 16 do
+		embers[i] = {
+			Frame = dot(layer, rng:NextInteger(2, 3), i % 3 == 0 and "Warning" or "Accent"),
+			X = rng:NextNumber(),
+			Y = rng:NextNumber(0.2, 1),
+			Rise = rng:NextNumber(0.05, 0.12),
+			Phase = rng:NextNumber(0, math.pi * 2),
+		}
+	end
+
+	local bat = create("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Size = UDim2.fromOffset(18, 10),
+		BackgroundTransparency = 1,
+		Visible = false,
+		Parent = layer,
+	})
+	local body = dot(bat, 4, "InkMuted")
+	body.AnchorPoint = Vector2.new(0.5, 0.5)
+	body.Position = UDim2.fromScale(0.5, 0.5)
+	local function wing()
+		return rule({
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.fromOffset(8, 2),
+			Color = "InkMuted",
+			Parent = bat,
+		})
+	end
+	local leftWing, rightWing = wing(), wing()
+	local batWait, batProgress, batDirection = 3, nil, 1
+
+	return function(dt, time)
+		glow.BackgroundTransparency = math.clamp(0.3 + math.noise(time * 1.5) * 0.4, 0, 1)
+
+		for _, ember in ipairs(embers) do
+			ember.Y -= ember.Rise * dt
+			if ember.Y < 0.2 then
+				ember.Y = 1.02
+				ember.X = rng:NextNumber()
+			end
+			ember.Frame.Position = UDim2.fromScale(ember.X + math.sin(time * 1.3 + ember.Phase) * 0.01, ember.Y)
+			ember.Frame.BackgroundTransparency = math.clamp(1.2 - ember.Y, 0.2, 1)
+		end
+
+		if not batProgress then
+			batWait -= dt
+			if batWait <= 0 then
+				batProgress = 0
+				batDirection = rng:NextNumber() < 0.5 and 1 or -1
+				bat.Visible = true
+			end
+			return
+		end
+		batProgress += dt / 3.5
+		if batProgress >= 1 then
+			batProgress = nil
+			batWait = rng:NextNumber(8, 20)
+			bat.Visible = false
+			return
+		end
+		local across = batDirection == 1 and batProgress or 1 - batProgress
+		bat.Position = UDim2.new(across * 1.1 - 0.05, 0, 0, 24 + math.sin(batProgress * math.pi * 3) * 10)
+		local flap = math.sin(time * 18) * 0.5
+		local reachX, reachY = math.cos(flap) * 4, math.sin(flap) * 4
+		leftWing.Position = UDim2.new(0.5, -reachX, 0.5, -reachY)
+		leftWing.Rotation = math.deg(flap)
+		rightWing.Position = UDim2.new(0.5, reachX, 0.5, -reachY)
+		rightWing.Rotation = -math.deg(flap)
+	end
+end
+
+local themeChosen = false
 
 function Library:SetTheme(theme)
+	themeChosen = true
 	local source = theme
 	if typeof(theme) == "string" then
 		source = Library.Themes[theme]
@@ -493,6 +761,17 @@ function Library:GetThemes()
 	end
 	table.sort(names)
 	return names
+end
+
+function Library:GetSeasonalTheme()
+	local now = os.date("*t")
+	local month, day = now.month, now.day
+	if month == 10 or (month == 11 and day <= 7) then
+		return "Hallows"
+	elseif (month == 11 and day >= 21) or month == 12 or (month == 1 and day <= 7) then
+		return "Frosted"
+	end
+	return nil
 end
 
 function Library:SetAccent(color)
@@ -613,10 +892,6 @@ function Library:Destroy()
 	end
 end
 
---------------------------------------------------------------------------------
--- Notifications (library-level, so they work with or without a window)
---------------------------------------------------------------------------------
-
 local notifyHolder
 local notifyOrder = 0
 
@@ -631,6 +906,7 @@ local function getNotifyHolder()
 		DisplayOrder = 200,
 		Parent = getPlayerGui(),
 	})
+	pinScale(gui)
 	notifyHolder = create("Frame", {
 		AnchorPoint = Vector2.new(1, 1),
 		Position = UDim2.new(1, -20, 1, -20),
@@ -675,7 +951,6 @@ function Library:Notify(options)
 		Parent = wrapper,
 	}, { stroke("Rule", 1), corner(4) })
 
-	-- Colored margin rule on the left (scale height = the card's own height).
 	rule({ Size = UDim2.new(0, 2, 1, 0), Color = colorKey, Parent = card })
 
 	local body = create("Frame", {
@@ -832,16 +1107,16 @@ function Library:Notify(options)
 	return notification
 end
 
---------------------------------------------------------------------------------
--- Window
---------------------------------------------------------------------------------
-
 function Library:AddWindow(options)
 	assert(RunService:IsClient(), "[Verdant] The UI library can only be used on the client.")
 	options = options or {}
 
-	if options.Theme then
-		Library:SetTheme(options.Theme)
+	local theme = options.Theme
+	if theme == nil and options.Seasonal ~= false and not themeChosen then
+		theme = Library:GetSeasonalTheme()
+	end
+	if theme then
+		Library:SetTheme(theme)
 	end
 	if options.Sounds ~= nil then
 		Library.Settings.Sounds = options.Sounds == true
@@ -882,6 +1157,7 @@ function Library:AddWindow(options)
 		Parent = playerGui,
 	})
 	self.Gui = gui
+	pinScale(gui)
 
 	-- Root holds the shadow + page; drag/resize/minimize act on it.
 	local root = create("Frame", {
@@ -915,23 +1191,22 @@ function Library:AddWindow(options)
 		Size = UDim2.fromScale(1, 1),
 		BorderSizePixel = 0,
 		ClipsDescendants = true,
-		Theme = { BackgroundColor3 = "Paper" },
+		Theme = { BackgroundColor3 = "Paper", BackgroundTransparency = "PaperTransparency" },
 		Parent = root,
 	}, { stroke("Rule", 1), corner(4) })
 	self.Main = main
 
-	-- Masthead ----------------------------------------------------------------
 	local masthead = create("Frame", {
 		Name = "Masthead",
-		Size = UDim2.new(1, 0, 0, MASTHEAD),
+		Size = UDim2.new(1, 0, 0, mastheadHeight),
 		BackgroundTransparency = 1,
 		Parent = main,
 	})
 
 	local titleHolder = create("Frame", {
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(28, 0),
-		Size = UDim2.new(0.6, -28, 1, 0),
+		Position = UDim2.fromOffset(20, 0),
+		Size = UDim2.new(0.6, -20, 1, 0),
 		Parent = masthead,
 	}, {
 		create("UIListLayout", {
@@ -957,7 +1232,7 @@ function Library:AddWindow(options)
 	self.TitleLabel = text({
 		Font = "Serif",
 		Weight = Enum.FontWeight.Bold,
-		TextSize = 22,
+		TextSize = 18,
 		Text = self.Name,
 		AutomaticSize = Enum.AutomaticSize.X,
 		Size = UDim2.fromOffset(0, 30),
@@ -968,7 +1243,7 @@ function Library:AddWindow(options)
 	self.SubtitleLabel = text({
 		Font = "Serif",
 		Italic = true,
-		TextSize = 14,
+		TextSize = 13,
 		Color = "InkMuted",
 		Text = self.Subtitle,
 		AutomaticSize = Enum.AutomaticSize.X,
@@ -980,7 +1255,7 @@ function Library:AddWindow(options)
 
 	local meta = create("Frame", {
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -28, 0, 0),
+		Position = UDim2.new(1, -20, 0, 0),
 		Size = UDim2.new(0.4, 0, 1, 0),
 		BackgroundTransparency = 1,
 		Parent = masthead,
@@ -1031,7 +1306,7 @@ function Library:AddWindow(options)
 		AutomaticSize = Enum.AutomaticSize.X,
 		Font = "Serif",
 		Italic = true,
-		TextSize = 13,
+		TextSize = 12,
 		Color = false,
 		TextColor3 = Theme.InkFaint,
 		LayoutOrder = 1,
@@ -1056,15 +1331,13 @@ function Library:AddWindow(options)
 		self:Destroy()
 	end)
 
-	-- Newspaper double rule: heavy over light.
-	rule({ Position = UDim2.fromOffset(0, MASTHEAD), Size = UDim2.new(1, 0, 0, 2), Color = "Ink", Parent = main })
-	rule({ Position = UDim2.fromOffset(0, MASTHEAD + 4), Size = UDim2.new(1, 0, 0, 1), Color = "Ink", Parent = main })
+	rule({ Position = UDim2.fromOffset(0, mastheadHeight), Size = UDim2.new(1, 0, 0, 2), Color = "Ink", Parent = main })
+	rule({ Position = UDim2.fromOffset(0, mastheadHeight + 4), Size = UDim2.new(1, 0, 0, 1), Color = "Ink", Parent = main })
 
-	-- Section tabs --------------------------------------------------------------
 	local strip = create("ScrollingFrame", {
 		Name = "Tabs",
-		Position = UDim2.fromOffset(28, MASTHEAD + DOUBLE_RULE),
-		Size = UDim2.new(1, -56, 0, TABSTRIP),
+		Position = UDim2.fromOffset(20, mastheadHeight + doubleRuleHeight),
+		Size = UDim2.new(1, -40, 0, tabStripHeight),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 0,
@@ -1084,7 +1357,7 @@ function Library:AddWindow(options)
 			FillDirection = Enum.FillDirection.Horizontal,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 26),
+			Padding = UDim.new(0, 20),
 		}),
 	})
 	self.TabIndicator = rule({
@@ -1095,13 +1368,12 @@ function Library:AddWindow(options)
 		Color = "Accent",
 		Parent = strip,
 	})
-	rule({ Position = UDim2.fromOffset(0, CONTENT_TOP - 1), Size = UDim2.new(1, 0, 0, 1), Parent = main })
+	rule({ Position = UDim2.fromOffset(0, contentTop - 1), Size = UDim2.new(1, 0, 0, 1), Parent = main })
 
-	-- Content -----------------------------------------------------------------
 	self.Content = create("Frame", {
 		Name = "Content",
-		Position = UDim2.fromOffset(0, CONTENT_TOP),
-		Size = UDim2.new(1, 0, 1, -CONTENT_TOP),
+		Position = UDim2.fromOffset(0, contentTop),
+		Size = UDim2.new(1, 0, 1, -contentTop),
 		BackgroundTransparency = 1,
 		ClipsDescendants = true,
 		Parent = main,
@@ -1124,7 +1396,6 @@ function Library:AddWindow(options)
 		Parent = main,
 	})
 
-	-- Resize grip: two short diagonal hairlines.
 	local grip = create("TextButton", {
 		Name = "ResizeGrip",
 		AnchorPoint = Vector2.new(1, 1),
@@ -1244,11 +1515,22 @@ function Library:AddWindow(options)
 		end
 	end)
 
-	-- Keybind -----------------------------------------------------------------
 	self:_connect(UserInputService.InputBegan, function(input, processed)
 		if not processed and self.Keybind and input.KeyCode == self.Keybind then
 			self:Toggle()
 		end
+	end)
+
+	self:_connect(RunService.RenderStepped, function(dt)
+		local animationScale = Library.Settings.AnimationScale
+		if self._seasonStep and self.Visible and animationScale > 0 then
+			self._seasonClock += dt / animationScale
+			self._seasonStep(dt / animationScale, self._seasonClock)
+		end
+	end)
+	self:_applySeason()
+	onThemeChanged(main, function()
+		self:_applySeason()
 	end)
 
 	self:_resetStatus()
@@ -1269,7 +1551,34 @@ function Window:_connect(signal, fn)
 	return connection
 end
 
--- Open: settle from 97% scale while the page veil lifts.
+function Window:_applySeason()
+	local season = Theme.Season
+	if season == self._season then
+		return
+	end
+	self._season = season
+	self._seasonStep = nil
+	if self._seasonLayer then
+		self._seasonLayer:Destroy()
+		self._seasonLayer = nil
+	end
+	local build = season and Seasons[season]
+	if not build then
+		return
+	end
+	-- ZIndex 0 keeps it behind the (transparent) content, so it never covers text or takes input.
+	self._seasonLayer = create("Frame", {
+		Name = "Season",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		ZIndex = 0,
+		Parent = self.Main,
+	})
+	self._seasonClock = 0
+	self._seasonStep = build(self._seasonLayer)
+	self._seasonStep(0, 0)
+end
+
 function Window:_open()
 	self.Root.Visible = true
 	self.Scale.Scale = 0.97
@@ -1358,7 +1667,7 @@ function Window:Minimize()
 		self._dragTarget = nil
 	end
 	local fullHeight = self.Size.Y.Offset
-	local collapsed = MASTHEAD + DOUBLE_RULE
+	local collapsed = mastheadHeight + doubleRuleHeight
 	local shift = (fullHeight - collapsed) / 2
 	local pos = self.Root.Position
 	self.Minimized = not self.Minimized
@@ -1438,10 +1747,6 @@ function Window:SelectTab(target)
 	end
 end
 
---------------------------------------------------------------------------------
--- Dialogs
---------------------------------------------------------------------------------
-
 function Window:Dialog(options)
 	options = options or {}
 	if self.Minimized then
@@ -1474,7 +1779,7 @@ function Window:Dialog(options)
 		Active = true,
 		Theme = { BackgroundColor3 = "Paper" },
 		Parent = overlay,
-	}, { stroke("Rule", 1), corner(4), padding(26, 22, 28, 28), listLayout(12) })
+	}, { stroke("Rule", 1), corner(4), padding(20, 18, 22, 22), listLayout(12) })
 	local cardScale = create("UIScale", { Scale = 0.97, Parent = card })
 
 	text({
@@ -1482,7 +1787,7 @@ function Window:Dialog(options)
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Font = "Serif",
 		Weight = Enum.FontWeight.Bold,
-		TextSize = 21,
+		TextSize = 18,
 		TextWrapped = true,
 		Text = options.Title or "Dialog",
 		LayoutOrder = 1,
@@ -1505,7 +1810,7 @@ function Window:Dialog(options)
 	end
 
 	local buttonRow = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 34),
+		Size = UDim2.new(1, 0, 0, 30),
 		BackgroundTransparency = 1,
 		LayoutOrder = 3,
 		Parent = card,
@@ -1540,20 +1845,19 @@ function Window:Dialog(options)
 
 	local activators = {}
 	local buttons = options.Buttons or { { Title = "OK", Style = "Primary" } }
-	-- Rendered right-to-left reading order: secondary links first, primary action last (rightmost).
 	for i, def in ipairs(buttons) do
 		local style = def.Style or (i == 1 and "Primary" or "Secondary")
 		local button
 		if style == "Secondary" then
-			button = link({ Size = UDim2.fromOffset(0, 30), TextSize = 15, Text = def.Title or "Cancel", LayoutOrder = i })
+			button = link({ Size = UDim2.fromOffset(0, 26), TextSize = 14, Text = def.Title or "Cancel", LayoutOrder = i })
 		else
 			local fillKey = style == "Danger" and "Danger" or "Accent"
 			button = text({
 				Class = "TextButton",
-				Size = UDim2.fromOffset(0, 34),
+				Size = UDim2.fromOffset(0, 30),
 				AutomaticSize = Enum.AutomaticSize.X,
 				Weight = Enum.FontWeight.SemiBold,
-				TextSize = 15,
+				TextSize = 14,
 				Color = "OnAccent",
 				Text = def.Title or "OK",
 				LayoutOrder = -i,
@@ -1642,10 +1946,6 @@ function Window:Confirm(options)
 	})
 end
 
---------------------------------------------------------------------------------
--- Tabs
---------------------------------------------------------------------------------
-
 function Window:AddTab(options)
 	options = options or {}
 	local tab = setmetatable({}, Tab)
@@ -1686,7 +1986,7 @@ function Window:AddTab(options)
 	local nameLabel = text({
 		Size = UDim2.new(0, 0, 1, 0),
 		AutomaticSize = Enum.AutomaticSize.X,
-		TextSize = 15,
+		TextSize = 14,
 		Color = false,
 		TextColor3 = Theme.InkFaint,
 		Text = tab.Name,
@@ -1708,23 +2008,22 @@ function Window:AddTab(options)
 		Visible = false,
 		Theme = { ScrollBarImageColor3 = "InkFaint" },
 		Parent = self.Content,
-	}, { listLayout(0), padding(22, 30, 18, 18) })
+	}, { listLayout(0), padding(14, 20, 10, 10) })
 
-	-- Page heading: the tab name set large, with an optional italic standfirst.
 	local heading = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
 		LayoutOrder = 0,
 		Parent = page,
-	}, { listLayout(4), padding(0, 14, ROW_INSET, ROW_INSET) })
+	}, { listLayout(4), padding(0, 8, rowInset, rowInset) })
 
 	tab.HeadingTitle = text({
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Font = "Serif",
 		Weight = Enum.FontWeight.Bold,
-		TextSize = 28,
+		TextSize = 20,
 		TextWrapped = true,
 		Text = tab.Name,
 		LayoutOrder = 1,
@@ -1735,7 +2034,7 @@ function Window:AddTab(options)
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Font = "Serif",
 		Italic = true,
-		TextSize = 14,
+		TextSize = 13,
 		Color = "InkMuted",
 		TextWrapped = true,
 		Text = options.Description or "",
@@ -1768,10 +2067,10 @@ function Window:AddTab(options)
 		end
 		tab:Select()
 	end)
-	-- Fonts load asynchronously; keep the underline matched to the label's real width.
+	-- Fonts load asynchronously, and any tab resizing can shift the active tab along the strip.
 	button:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		if self.ActiveTab == tab then
-			tab:_placeIndicator(0)
+		if self.ActiveTab then
+			self.ActiveTab:_placeIndicator(0)
 		end
 	end)
 
@@ -1805,8 +2104,10 @@ end
 
 function Tab:_placeIndicator(duration)
 	local window = self.Window
-	local x = self.Button.AbsolutePosition.X - window.TabList.AbsolutePosition.X
-	local width = self.Button.AbsoluteSize.X
+	-- Absolute values include the window's UIScale; offsets are set before it applies.
+	local scale = window.Scale.Scale
+	local x = (self.Button.AbsolutePosition.X - window.TabList.AbsolutePosition.X) / scale
+	local width = self.Button.AbsoluteSize.X / scale
 	tween(window.TabIndicator, {
 		Position = UDim2.new(0, x, 1, 0),
 		Size = UDim2.new(0, width, 0, 2),
@@ -1845,10 +2146,6 @@ function Tab:Select()
 	window.ActiveTab = self
 	self:_setActive(true)
 end
-
---------------------------------------------------------------------------------
--- Elements: shared behaviour
---------------------------------------------------------------------------------
 
 function Element:Get()
 	return self.Value
@@ -1922,25 +2219,13 @@ function Element:Destroy()
 	end)
 end
 
--- Gives a value element its config ID: options.Flag / options.Id if set, otherwise
--- "Tab/Section/Name" from the names it was created with (renaming later keeps the ID).
--- Auto IDs that collide get " #2", " #3", ... in creation order.
-local function register(container, options, element, typeName)
+-- Adds a value element to the config under options.Flag / options.Id. Elements with neither,
+-- or with the flag "Ignore", still work but are never exported or loaded.
+local function register(options, element, typeName)
 	element.Type = typeName
 	local id = options.Flag or options.Id
-	if not id then
-		local parts = { container.Tab.Name }
-		if container ~= container.Tab then
-			table.insert(parts, container.Name)
-		end
-		table.insert(parts, element.Name ~= "" and element.Name or typeName)
-		local base = table.concat(parts, "/")
-		id = base
-		local n = 1
-		while Library.Flags[id] ~= nil do
-			n += 1
-			id = base .. " #" .. n
-		end
+	if not id or id == "Ignore" then
+		return
 	end
 	element.Id = id
 	element.Flag = id
@@ -1985,17 +2270,17 @@ function Tab:_element(options, rightWidth, mode)
 	})
 
 	local labels = create("Frame", {
-		Position = UDim2.fromOffset(ROW_INSET, 0),
-		Size = UDim2.new(1, -(ROW_INSET * 2 + rightWidth + (rightWidth > 0 and 20 or 0)), 0, 0),
+		Position = UDim2.fromOffset(rowInset, 0),
+		Size = UDim2.new(1, -(rowInset * 2 + rightWidth + (rightWidth > 0 and 20 or 0)), 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
 		Parent = header,
-	}, { listLayout(3), padding(13, 13, 0, 0) })
+	}, { listLayout(3), padding(9, 9, 0, 0) })
 
 	local title = text({
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		TextSize = 15,
+		TextSize = 14,
 		TextWrapped = true,
 		Text = options.Name or options.Title or "",
 		LayoutOrder = 1,
@@ -2007,7 +2292,7 @@ function Tab:_element(options, rightWidth, mode)
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Font = "Serif",
 		Italic = true,
-		TextSize = 13,
+		TextSize = 12,
 		Color = "InkMuted",
 		TextWrapped = true,
 		Text = options.Description or "",
@@ -2018,8 +2303,8 @@ function Tab:_element(options, rightWidth, mode)
 
 	local control = create("Frame", {
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -ROW_INSET, 0.5, 0),
-		Size = UDim2.fromOffset(rightWidth, 28),
+		Position = UDim2.new(1, -rowInset, 0.5, 0),
+		Size = UDim2.fromOffset(rightWidth, 24),
 		BackgroundTransparency = 1,
 		Parent = header,
 	})
@@ -2030,7 +2315,7 @@ function Tab:_element(options, rightWidth, mode)
 		LayoutOrder = 99,
 		Parent = frame,
 	})
-	rule({ Position = UDim2.fromOffset(ROW_INSET, 0), Size = UDim2.new(1, -ROW_INSET * 2, 1, 0), Parent = divider })
+	rule({ Position = UDim2.fromOffset(rowInset, 0), Size = UDim2.new(1, -rowInset * 2, 1, 0), Parent = divider })
 
 	local element = setmetatable({
 		Window = self.Window,
@@ -2069,10 +2354,6 @@ function Tab:_element(options, rightWidth, mode)
 	return element
 end
 
---------------------------------------------------------------------------------
--- Section
---------------------------------------------------------------------------------
-
 function Tab:AddSection(options)
 	if typeof(options) == "string" then
 		options = { Name = options }
@@ -2086,7 +2367,7 @@ function Tab:AddSection(options)
 		BackgroundTransparency = 1,
 		LayoutOrder = self._order,
 		Parent = self.Container,
-	}, { listLayout(0), padding(22, 0, 0, 0) })
+	}, { listLayout(0), padding(14, 0, 0, 0) })
 
 	local headerRow = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 0),
@@ -2094,20 +2375,19 @@ function Tab:AddSection(options)
 		BackgroundTransparency = 1,
 		LayoutOrder = 0,
 		Parent = holder,
-	}, { padding(0, 8, ROW_INSET, ROW_INSET) })
+	}, { padding(0, 6, rowInset, rowInset) })
 
 	local title = text({
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Font = "Serif",
 		Weight = Enum.FontWeight.Bold,
-		TextSize = 17,
+		TextSize = 15,
 		TextWrapped = true,
 		Text = options.Name or "Section",
 		Parent = headerRow,
 	})
 
-	-- A strong rule under the subhead; rows below carry their own hairlines.
 	local ruleHolder = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 1),
 		BackgroundTransparency = 1,
@@ -2115,8 +2395,8 @@ function Tab:AddSection(options)
 		Parent = holder,
 	})
 	rule({
-		Position = UDim2.fromOffset(ROW_INSET, 0),
-		Size = UDim2.new(1, -ROW_INSET * 2, 1, 0),
+		Position = UDim2.fromOffset(rowInset, 0),
+		Size = UDim2.new(1, -rowInset * 2, 1, 0),
 		Color = "Ink",
 		Parent = ruleHolder,
 	})
@@ -2142,10 +2422,6 @@ function Tab:AddSection(options)
 	return section
 end
 
---------------------------------------------------------------------------------
--- Button
---------------------------------------------------------------------------------
-
 function Tab:AddButton(options)
 	options = options or {}
 	local idleText = options.Hint or "Run"
@@ -2163,7 +2439,7 @@ function Tab:AddButton(options)
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, 0, 0.5, 0),
 		Size = UDim2.fromOffset(16, 22),
-		TextSize = 16,
+		TextSize = 14,
 		Color = false,
 		TextColor3 = Theme.InkMuted,
 		TextXAlignment = Enum.TextXAlignment.Right,
@@ -2176,7 +2452,7 @@ function Tab:AddButton(options)
 		Position = UDim2.new(1, -22, 0.5, 0),
 		Size = UDim2.fromOffset(0, 22),
 		AutomaticSize = Enum.AutomaticSize.X,
-		TextSize = 15,
+		TextSize = 14,
 		Color = false,
 		TextColor3 = Theme.InkMuted,
 		TextXAlignment = Enum.TextXAlignment.Right,
@@ -2252,7 +2528,6 @@ function Tab:AddButton(options)
 			return
 		end
 		click()
-		-- The arrow pushes forward on press.
 		arrow.Position = UDim2.new(1, 8, 0.5, 0)
 		tween(arrow, { Position = UDim2.new(1, button._hovered and 3 or 0, 0.5, 0) }, 0.35)
 		button:Fire()
@@ -2261,19 +2536,15 @@ function Tab:AddButton(options)
 	return button
 end
 
---------------------------------------------------------------------------------
--- Toggle: "Off  On", the current word underlined.
---------------------------------------------------------------------------------
-
 function Tab:AddToggle(options)
 	options = options or {}
-	local toggle = self:_element(options, 80, "hover")
+	local toggle = self:_element(options, 72, "hover")
 	toggle.Value = options.Default == true
 
 	local words = create("Frame", {
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.fromScale(1, 0.5),
-		Size = UDim2.new(0, 0, 0, 22),
+		Size = UDim2.new(0, 0, 0, 20),
 		AutomaticSize = Enum.AutomaticSize.X,
 		BackgroundTransparency = 1,
 		Parent = toggle.Control,
@@ -2282,49 +2553,42 @@ function Tab:AddToggle(options)
 			FillDirection = Enum.FillDirection.Horizontal,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 12),
+			Padding = UDim.new(0, 10),
 		}),
 	})
 
-	local function word(label, order)
-		return text({
+	-- Each word owns its underline and sizes it by scale. Measuring AbsoluteSize instead goes
+	-- stale while fonts load and is skewed by the window's UIScale during the open animation.
+	local function word(label, order, lineColor)
+		local button = text({
 			Class = "TextButton",
 			Size = UDim2.new(0, 0, 1, 0),
 			AutomaticSize = Enum.AutomaticSize.X,
-			TextSize = 15,
+			TextSize = 14,
 			Color = false,
 			Text = label,
 			LayoutOrder = order,
 			Parent = words,
 		})
+		local line = rule({
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 0, 1, 1),
+			Size = UDim2.new(0, 0, 0, 2),
+			Color = lineColor,
+			Parent = button,
+		})
+		return button, line
 	end
-	local offWord = word("Off", 1)
-	local onWord = word("On", 2)
+	local offWord, offLine = word("Off", 1, "InkMuted")
+	local onWord, onLine = word("On", 2, "Accent")
 
-	local underline = rule({
-		AnchorPoint = Vector2.new(0, 1),
-		Size = UDim2.new(0, 0, 0, 2),
-		Color = false,
-		Parent = toggle.Control,
-	})
-	underline.BackgroundColor3 = Theme.Ink
-
-	-- Measured from sizes only (the words sit flush right), so dragging the window
-	-- doesn't trigger any work.
 	local function render(duration)
 		local selected = toggle.Value and onWord or offWord
 		local other = toggle.Value and offWord or onWord
 		tween(selected, { TextColor3 = Theme.Ink }, duration)
 		tween(other, { TextColor3 = Theme.InkFaint }, duration)
-		local x = toggle.Control.AbsoluteSize.X - words.AbsoluteSize.X
-		if toggle.Value then
-			x += offWord.AbsoluteSize.X + 12
-		end
-		tween(underline, {
-			Position = UDim2.new(0, x, 0.5, 12),
-			Size = UDim2.new(0, selected.AbsoluteSize.X, 0, 2),
-			BackgroundColor3 = toggle.Value and Theme.Accent or Theme.InkMuted,
-		}, duration)
+		tween(onLine, { Size = UDim2.new(toggle.Value and 1 or 0, 0, 0, 2) }, duration)
+		tween(offLine, { Size = UDim2.new(toggle.Value and 0 or 1, 0, 0, 2) }, duration)
 	end
 
 	function toggle:Set(value, silent)
@@ -2353,23 +2617,14 @@ function Tab:AddToggle(options)
 		choose(true)
 	end)
 
-	-- Keep the underline aligned once fonts load.
-	words:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		render(0)
-	end)
-
 	onThemeChanged(words, function()
 		render(0.3)
 	end)
 
 	render(0)
-	register(self, options, toggle, "Toggle")
+	register(options, toggle, "Toggle")
 	return toggle
 end
-
---------------------------------------------------------------------------------
--- Slider: a large number on the right, a ruler track underneath.
---------------------------------------------------------------------------------
 
 function Tab:AddSlider(options)
 	options = options or {}
@@ -2403,26 +2658,25 @@ function Tab:AddSlider(options)
 		Class = "TextBox",
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.fromScale(1, 0.5),
-		Size = UDim2.new(1, 0, 0, 28),
+		Size = UDim2.new(1, 0, 0, 24),
 		Font = "Serif",
 		Weight = Enum.FontWeight.Bold,
-		TextSize = 20,
+		TextSize = 16,
 		TextXAlignment = Enum.TextXAlignment.Right,
 		ClearTextOnFocus = false,
 		Text = "",
 		Parent = slider.Control,
 	})
 
-	-- Ruler track row
 	local trackRow = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 26),
+		Size = UDim2.new(1, 0, 0, 22),
 		BackgroundTransparency = 1,
 		LayoutOrder = 2,
 		Parent = slider.Frame,
 	})
 	local track = create("Frame", {
-		Position = UDim2.fromOffset(ROW_INSET, 4),
-		Size = UDim2.new(1, -ROW_INSET * 2, 0, 12),
+		Position = UDim2.fromOffset(rowInset, 4),
+		Size = UDim2.new(1, -rowInset * 2, 0, 12),
 		BackgroundTransparency = 1,
 		Parent = trackRow,
 	})
@@ -2563,13 +2817,9 @@ function Tab:AddSlider(options)
 
 	slider.Value = round(options.Default or min)
 	render(0)
-	register(self, options, slider, "Slider")
+	register(options, slider, "Slider")
 	return slider
 end
-
---------------------------------------------------------------------------------
--- Textbox: an underlined field, like a form on paper.
---------------------------------------------------------------------------------
 
 function Tab:AddTextbox(options)
 	options = options or {}
@@ -2579,7 +2829,7 @@ function Tab:AddTextbox(options)
 	local box = text({
 		Class = "TextBox",
 		Size = UDim2.new(1, 0, 1, 0),
-		TextSize = 15,
+		TextSize = 14,
 		PlaceholderText = options.Placeholder or "Type here",
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		ClearTextOnFocus = options.ClearOnFocus == true,
@@ -2642,13 +2892,9 @@ function Tab:AddTextbox(options)
 		end
 	end
 
-	register(self, options, textbox, "Textbox")
+	register(options, textbox, "Textbox")
 	return textbox
 end
-
---------------------------------------------------------------------------------
--- Label & Paragraph
---------------------------------------------------------------------------------
 
 local function freeformElement(tab, name)
 	tab._order += 1
@@ -2658,7 +2904,7 @@ local function freeformElement(tab, name)
 		BackgroundTransparency = 1,
 		LayoutOrder = tab._order,
 		Parent = tab.Container,
-	}, { padding(12, 12, ROW_INSET, ROW_INSET), listLayout(6) })
+	}, { padding(8, 8, rowInset, rowInset), listLayout(6) })
 	local element = setmetatable({
 		Window = tab.Window,
 		Name = name,
@@ -2681,7 +2927,7 @@ function Tab:AddLabel(options)
 	element.Title = text({
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		TextSize = 15,
+		TextSize = 14,
 		Color = false,
 		TextColor3 = Theme.InkMuted,
 		TextWrapped = true,
@@ -2723,7 +2969,7 @@ function Tab:AddParagraph(options)
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Font = "Serif",
 		Weight = Enum.FontWeight.Bold,
-		TextSize = 16,
+		TextSize = 15,
 		TextWrapped = true,
 		Text = element.TitleText,
 		LayoutOrder = 1,
@@ -2734,7 +2980,7 @@ function Tab:AddParagraph(options)
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Font = "Serif",
-		TextSize = 14,
+		TextSize = 13,
 		Color = "InkMuted",
 		TextWrapped = true,
 		LineHeight = 1.35,
@@ -2776,10 +3022,6 @@ function Tab:AddParagraph(options)
 	return element
 end
 
---------------------------------------------------------------------------------
--- Selector (shared by Dropdown and PlayerSelector)
---------------------------------------------------------------------------------
-
 --[[
 	adapter = {
 		type = "Dropdown" | "PlayerSelector",
@@ -2792,10 +3034,10 @@ end
 	}
 ]]
 function Tab:_selector(options, adapter)
-	local MAX_VISIBLE = options.MaxVisible or 7
-	local RIGHT = 220
+	local maxVisible = options.MaxVisible or 7
+	local controlWidth = 220
 
-	local selector = self:_element(options, RIGHT, "hover")
+	local selector = self:_element(options, controlWidth, "hover")
 	selector.Options = table.clone(options.Options or {})
 	selector.Multi = options.Multi == true
 	selector.Open = false
@@ -2803,7 +3045,6 @@ function Tab:_selector(options, adapter)
 
 	local control = selector.Control
 
-	-- Value area: right-aligned value, optional avatar, chevron.
 	local arrow, arrowBars = chevron(control, "InkMuted", {
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, 0, 0.5, 1),
@@ -2813,7 +3054,7 @@ function Tab:_selector(options, adapter)
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -20, 0.5, 0),
 		Size = UDim2.new(1, -20, 0, 22),
-		TextSize = 15,
+		TextSize = 14,
 		Color = false,
 		TextXAlignment = Enum.TextXAlignment.Right,
 		TextTruncate = Enum.TextTruncate.AtEnd,
@@ -2841,7 +3082,6 @@ function Tab:_selector(options, adapter)
 	end
 	valueLabel:GetPropertyChangedSignal("TextBounds"):Connect(placeIcon)
 
-	-- Expanding list ------------------------------------------------------------
 	local holder = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 0),
 		BackgroundTransparency = 1,
@@ -2854,13 +3094,13 @@ function Tab:_selector(options, adapter)
 	if searchable == nil then
 		searchable = #selector.Options > 8 or adapter.type == "PlayerSelector"
 	end
-	local SEARCH_HEIGHT = searchable and 36 or 0
+	local searchHeight = searchable and 32 or 0
 
 	local searchBox, searchLine
 	if searchable then
 		local searchFrame = create("Frame", {
-			Position = UDim2.fromOffset(ROW_INSET + 16, 2),
-			Size = UDim2.new(1, -(ROW_INSET * 2 + 16), 0, 28),
+			Position = UDim2.fromOffset(rowInset + 16, 2),
+			Size = UDim2.new(1, -(rowInset * 2 + 16), 0, 24),
 			BackgroundTransparency = 1,
 			Parent = holder,
 		})
@@ -2869,7 +3109,7 @@ function Tab:_selector(options, adapter)
 			Size = UDim2.fromScale(1, 1),
 			Font = "Serif",
 			Italic = true,
-			TextSize = 14,
+			TextSize = 13,
 			PlaceholderText = "Search",
 			ClearTextOnFocus = false,
 			Text = "",
@@ -2891,11 +3131,11 @@ function Tab:_selector(options, adapter)
 	end
 
 	local emptyLabel = text({
-		Position = UDim2.fromOffset(ROW_INSET + 16, SEARCH_HEIGHT),
-		Size = UDim2.new(1, -(ROW_INSET * 2 + 16), 0, OPTION_HEIGHT),
+		Position = UDim2.fromOffset(rowInset + 16, searchHeight),
+		Size = UDim2.new(1, -(rowInset * 2 + 16), 0, optionHeight),
 		Font = "Serif",
 		Italic = true,
-		TextSize = 14,
+		TextSize = 13,
 		Color = "InkFaint",
 		Text = "Nothing matches.",
 		Visible = false,
@@ -2903,8 +3143,8 @@ function Tab:_selector(options, adapter)
 	})
 
 	local list = create("ScrollingFrame", {
-		Position = UDim2.fromOffset(ROW_INSET, SEARCH_HEIGHT),
-		Size = UDim2.new(1, -ROW_INSET * 2, 0, 0),
+		Position = UDim2.fromOffset(rowInset, searchHeight),
+		Size = UDim2.new(1, -rowInset * 2, 0, 0),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 2,
@@ -2965,7 +3205,6 @@ function Tab:_selector(options, adapter)
 			end
 		end
 		if animate then
-			-- A quick fade between values rather than a hard swap.
 			task.spawn(function()
 				tween(valueLabel, { TextTransparency = 1 }, 0.08).Completed:Wait()
 				apply()
@@ -2986,11 +3225,11 @@ function Tab:_selector(options, adapter)
 				visible += 1
 			end
 		end
-		local shown = math.min(visible, MAX_VISIBLE)
+		local shown = math.min(visible, maxVisible)
 		emptyLabel.Visible = shown == 0
-		local listHeight = shown * OPTION_HEIGHT
-		list.Size = UDim2.new(1, -ROW_INSET * 2, 0, listHeight)
-		local contentHeight = SEARCH_HEIGHT + math.max(listHeight, OPTION_HEIGHT) + 8
+		local listHeight = shown * optionHeight
+		list.Size = UDim2.new(1, -rowInset * 2, 0, listHeight)
+		local contentHeight = searchHeight + math.max(listHeight, optionHeight) + 8
 		tween(holder, { Size = UDim2.new(1, 0, 0, selector.Open and contentHeight or 0) }, duration or 0.3)
 	end
 
@@ -3029,14 +3268,13 @@ function Tab:_selector(options, adapter)
 		table.clear(entries)
 		for i, option in ipairs(selector.Options) do
 			local row = create("TextButton", {
-				Size = UDim2.new(1, 0, 0, OPTION_HEIGHT),
+				Size = UDim2.new(1, 0, 0, optionHeight),
 				BackgroundTransparency = 1,
 				AutoButtonColor = false,
 				Text = "",
 				LayoutOrder = i,
 				Parent = list,
 			})
-			-- Margin mark for the selected option.
 			local mark = rule({
 				AnchorPoint = Vector2.new(0, 0.5),
 				Position = UDim2.new(0, 2, 0.5, 0),
@@ -3189,13 +3427,9 @@ function Tab:_selector(options, adapter)
 		selector:Set(options.Default, true)
 	end
 	resize(0)
-	register(self, options, selector, adapter.type or "Dropdown")
+	register(options, selector, adapter.type or "Dropdown")
 	return selector
 end
-
---------------------------------------------------------------------------------
--- Dropdown
---------------------------------------------------------------------------------
 
 function Tab:AddDropdown(options)
 	options = options or {}
@@ -3210,7 +3444,7 @@ function Tab:AddDropdown(options)
 			return text({
 				Position = UDim2.fromOffset(16, 0),
 				Size = UDim2.new(1, -22, 1, 0),
-				TextSize = 15,
+				TextSize = 14,
 				Color = false,
 				TextColor3 = Theme.InkMuted,
 				Text = format(option),
@@ -3220,10 +3454,6 @@ function Tab:AddDropdown(options)
 		end,
 	})
 end
-
---------------------------------------------------------------------------------
--- Player selector
---------------------------------------------------------------------------------
 
 function Tab:AddPlayerSelector(options)
 	options = options or {}
@@ -3292,7 +3522,7 @@ function Tab:AddPlayerSelector(options)
 			create("ImageLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
 				Position = UDim2.new(0, 16, 0.5, 0),
-				Size = UDim2.fromOffset(22, 22),
+				Size = UDim2.fromOffset(20, 20),
 				Image = headshot(player.UserId),
 				Theme = { BackgroundColor3 = "Raised" },
 				Parent = row,
@@ -3314,7 +3544,7 @@ function Tab:AddPlayerSelector(options)
 			local name = text({
 				Size = UDim2.new(0, 0, 1, 0),
 				AutomaticSize = Enum.AutomaticSize.X,
-				TextSize = 15,
+				TextSize = 14,
 				Color = false,
 				TextColor3 = Theme.InkMuted,
 				Text = player.DisplayName,
@@ -3326,7 +3556,7 @@ function Tab:AddPlayerSelector(options)
 				AutomaticSize = Enum.AutomaticSize.X,
 				Font = "Serif",
 				Italic = true,
-				TextSize = 13,
+				TextSize = 12,
 				Color = "InkFaint",
 				Text = "@" .. player.Name .. (player == LocalPlayer and ", you" or ""),
 				LayoutOrder = 2,
