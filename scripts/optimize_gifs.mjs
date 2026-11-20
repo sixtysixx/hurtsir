@@ -15,19 +15,28 @@
 // only converted once: a manifest records a content fingerprint of the source
 // each variant came from (mtimes do not survive git checkouts). Pass --force to
 // re-encode everything and --keep-sources to leave the GIFs in place.
-import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync, writeFileSync, statSync, mkdirSync, rmSync } from 'node:fs';
-import { dirname, join, relative, sep } from 'node:path';
-import sharp from 'sharp';
+import { createHash } from "node:crypto";
+import {
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  statSync,
+  mkdirSync,
+  rmSync,
+} from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
+import sharp from "sharp";
 
 // One entry per gallery; the /gifz rules come first in public/_redirects.
-const TARGETS = [{ src: 'public/gifz', base: '/gifz', manifest: '.cache/gifz-webp.json' }];
-const REDIRECTS = 'public/_redirects';
+const TARGETS = [
+  { src: "public/gifz", base: "/gifz", manifest: ".cache/gifz-webp.json" },
+];
+const REDIRECTS = "public/_redirects";
 const MAX_EDGE = 480;
 const QUALITY = 70;
 
-const force = process.argv.includes('--force');
-const keepSources = process.argv.includes('--keep-sources');
+const force = process.argv.includes("--force");
+const keepSources = process.argv.includes("--keep-sources");
 const bytes = (p) => statSync(p).size;
 
 // Size alone collides: a replacement GIF with the same byte count as the
@@ -35,10 +44,10 @@ const bytes = (p) => statSync(p).size;
 // head+tail content hash (128 KiB read per file).
 const fingerprint = (p) => {
   const data = readFileSync(p);
-  const hash = createHash('sha1');
+  const hash = createHash("sha1");
   hash.update(data.subarray(0, 65536));
   hash.update(data.subarray(Math.max(0, data.length - 65536)));
-  return `${data.length}:${hash.digest('hex')}`;
+  return `${data.length}:${hash.digest("hex")}`;
 };
 
 // Recursive: subfolders (a staging area like gifz/tosort) must not ship raw
@@ -48,14 +57,14 @@ const walk = (dir) =>
   readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) return walk(full);
-    return entry.isFile() ? [relative(dir, full).split(sep).join('/')] : [];
+    return entry.isFile() ? [relative(dir, full).split(sep).join("/")] : [];
   });
 
 // Kept out of public/ so it is never uploaded. Only a local shortcut: a fresh
 // clone already contains the WebP files, so nothing is re-encoded there.
 const readManifest = (path) => {
   try {
-    return JSON.parse(readFileSync(path, 'utf8'));
+    return JSON.parse(readFileSync(path, "utf8"));
   } catch {
     return {};
   }
@@ -66,14 +75,14 @@ async function convertTarget({ src, base, manifest: manifestPath }) {
   mkdirSync(dirname(manifestPath), { recursive: true });
 
   const manifest = readManifest(manifestPath);
-  const gifs = walk(src).filter((f) => f.endsWith('.gif'));
+  const gifs = walk(src).filter((f) => f.endsWith(".gif"));
   const toRemove = [];
   let encoded = 0;
   let saved = 0;
 
   const jobs = gifs.map((name) => async () => {
     const file = join(src, name);
-    const out = join(src, `${name.replace(/\.gif$/i, '')}.webp`);
+    const out = join(src, `${name.replace(/\.gif$/i, "")}.webp`);
     const size = bytes(file);
     const hash = fingerprint(file);
 
@@ -85,12 +94,19 @@ async function convertTarget({ src, base, manifest: manifestPath }) {
     if (!fresh || missing) {
       try {
         await sharp(file, { animated: true })
-          .resize({ width: MAX_EDGE, height: MAX_EDGE, fit: 'inside', withoutEnlargement: true })
+          .resize({
+            width: MAX_EDGE,
+            height: MAX_EDGE,
+            fit: "inside",
+            withoutEnlargement: true,
+          })
           .webp({ quality: QUALITY, effort: 4 })
           .toFile(out);
       } catch (error) {
         // Half-downloaded GIFs are skipped rather than failing the deploy.
-        console.warn(`skipping ${base}/${name}: ${error.message.split('\n')[0]}`);
+        console.warn(
+          `skipping ${base}/${name}: ${error.message.split("\n")[0]}`,
+        );
         return;
       }
       encoded++;
@@ -121,12 +137,16 @@ async function convertTarget({ src, base, manifest: manifestPath }) {
     }
   }
 
-  const webps = walk(src).filter((f) => f.endsWith('.webp'));
+  const webps = walk(src).filter((f) => f.endsWith(".webp"));
 
   for (const name of Object.keys(manifest)) {
-    if (!gifs.includes(name) && !webps.includes(name.replace(/\.gif$/i, '.webp'))) delete manifest[name];
+    if (
+      !gifs.includes(name) &&
+      !webps.includes(name.replace(/\.gif$/i, ".webp"))
+    )
+      delete manifest[name];
   }
-  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 
   const total = webps.reduce((n, f) => n + bytes(join(src, f)), 0);
   console.log(
@@ -143,18 +163,23 @@ for (const target of TARGETS) results.push(await convertTarget(target));
 // One static rule per file: placeholders cannot rewrite an extension, and
 // Pages allows 2,000 static rules - far above the ~1,075 we have.
 const rules = [
-  '# Generated by scripts/optimize_gifs.mjs - do not edit by hand.',
-  '# Old GIF links (bookmarks, Discord embeds) keep working via the WebP twin.',
+  "# Generated by scripts/optimize_gifs.mjs - do not edit by hand.",
+  "# Old GIF links (bookmarks, Discord embeds) keep working via the WebP twin.",
   ...results.flatMap(({ src, base, webps }) =>
     webps
       // --keep-sources (or a failed rmSync) leaves the GIF in public/, so a 301
       // for that path would shadow the real file instead of standing in for a
       // deleted one.
       .filter(
-        (f) => !statSync(join(src, f.replace(/\.webp$/i, '.gif')), { throwIfNoEntry: false }),
+        (f) =>
+          !statSync(join(src, f.replace(/\.webp$/i, ".gif")), {
+            throwIfNoEntry: false,
+          }),
       )
-      .map((f) => `${base}/${f.replace(/\.webp$/i, '.gif')}  ${base}/${f}  301`),
+      .map(
+        (f) => `${base}/${f.replace(/\.webp$/i, ".gif")}  ${base}/${f}  301`,
+      ),
   ),
-  '',
-].join('\n');
+  "",
+].join("\n");
 writeFileSync(REDIRECTS, rules);

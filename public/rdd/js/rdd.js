@@ -539,7 +539,9 @@ function saveFile(fileName, data, mimeType = "application/zip") {
     URL.revokeObjectURL(document.body.dataset.redownloadUrl);
     delete document.body.dataset.redownloadUrl;
   }
-  document.querySelectorAll(".redownload-btn, .redownload-link").forEach((node) => node.remove());
+  document
+    .querySelectorAll(".redownload-btn, .redownload-link")
+    .forEach((node) => node.remove());
 
   const blob = new Blob([data], { type: mimeType });
 

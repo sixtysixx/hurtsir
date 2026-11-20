@@ -46,14 +46,14 @@ Download the latest build from
 Double-click the exe and accept the UAC prompt. With no switches it asks six questions
 before touching anything and then prints the resulting plan:
 
-| Question                                                               | Default |
-| ---------------------------------------------------------------------- | ------- |
-| do you want to run system corruption scans?                             | `n`     |
-| do you want to add an exclusion for the sirhurt folder?                 | `y`     |
-| do you want to download the latest Roblox build into `%LOCALAPPDATA%\Roblox\Versions`? | `y` |
-| do you want to download and clean current sirhurt configuration(s) via sirhurt cleaner? | `y` |
-| do you want to turn off launch at start and minimize to tray to avoid possible injection issues? | `y` |
-| do you want to automatically reboot your PC?                            | `n`     |
+| Question                                                                                         | Default |
+| ------------------------------------------------------------------------------------------------ | ------- |
+| do you want to run system corruption scans?                                                      | `n`     |
+| do you want to add an exclusion for the sirhurt folder?                                          | `y`     |
+| do you want to download the latest Roblox build into `%LOCALAPPDATA%\Roblox\Versions`?           | `y`     |
+| do you want to download and clean current sirhurt configuration(s) via sirhurt cleaner?          | `y`     |
+| do you want to turn off launch at start and minimize to tray to avoid possible injection issues? | `y`     |
+| do you want to automatically reboot your PC?                                                     | `n`     |
 
 Enter accepts the default, `y`/`n` answers explicitly. `Ctrl+C` cancels.
 
@@ -72,36 +72,36 @@ SirHurt entirely (every other stage still runs, and no download link is requeste
 
 ## Switches
 
-| Switch | Meaning |
-| ------ | ------- |
-| `--dir PATH` | install folder (default: SirHurt under Downloads, Desktop or Documents - whichever isn't synced to OneDrive) |
-| `--link URL` | SirHurt download link (gofile.io or app.box.com) |
-| `--archive PATH` | SirHurt archive to use instead of scanning this script's folder |
-| `--no-local-archive` | ignore any SirHurt archive sitting next to this script |
-| `--skip-roblox-build` | don't download a Roblox deployment into `%LOCALAPPDATA%\Roblox\Versions` |
-| `--roblox-version HASH` | Roblox build to install instead of the latest one (`version-xxxxxxxxxxxx`) |
-| `--roblox-channel NAME` | Roblox channel to resolve the build on (default: `LIVE`) |
-| `--skip-sirhurt` | don't install SirHurt |
-| `--skip-exclusions` | don't add the Defender exclusion |
-| `--skip-repair` | don't run SFC and DISM |
-| `--skip-runtimes` | don't install VC++ and .NET |
-| `--skip-roblox-settings` | don't touch Roblox's appStorage.json |
-| `--run-cleaner` | run SirHurt Cleaner (deletes Roblox/SirHurt configs, including stored SirHurt login data) |
-| `--reboot` | restart Windows when the run finishes (60-second delay; cancel with `shutdown /a`) |
-| `--no-survey` | don't ask the setup questions; use the defaults (everything except the cleaner and reboot) |
-| `--dry-run` | resolve everything and print it, write nothing |
-| `--version` | print the version |
+| Switch                   | Meaning                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `--dir PATH`             | install folder (default: SirHurt under Downloads, Desktop or Documents - whichever isn't synced to OneDrive) |
+| `--link URL`             | SirHurt download link (gofile.io or app.box.com)                                                             |
+| `--archive PATH`         | SirHurt archive to use instead of scanning this script's folder                                              |
+| `--no-local-archive`     | ignore any SirHurt archive sitting next to this script                                                       |
+| `--skip-roblox-build`    | don't download a Roblox deployment into `%LOCALAPPDATA%\Roblox\Versions`                                     |
+| `--roblox-version HASH`  | Roblox build to install instead of the latest one (`version-xxxxxxxxxxxx`)                                   |
+| `--roblox-channel NAME`  | Roblox channel to resolve the build on (default: `LIVE`)                                                     |
+| `--skip-sirhurt`         | don't install SirHurt                                                                                        |
+| `--skip-exclusions`      | don't add the Defender exclusion                                                                             |
+| `--skip-repair`          | don't run SFC and DISM                                                                                       |
+| `--skip-runtimes`        | don't install VC++ and .NET                                                                                  |
+| `--skip-roblox-settings` | don't touch Roblox's appStorage.json                                                                         |
+| `--run-cleaner`          | run SirHurt Cleaner (deletes Roblox/SirHurt configs, including stored SirHurt login data)                    |
+| `--reboot`               | restart Windows when the run finishes (60-second delay; cancel with `shutdown /a`)                           |
+| `--no-survey`            | don't ask the setup questions; use the defaults (everything except the cleaner and reboot)                   |
+| `--dry-run`              | resolve everything and print it, write nothing                                                               |
+| `--version`              | print the version                                                                                            |
 
 ## What it changes
 
 Inside the install folder:
 
-| Path | Content |
-| ---- | ------- |
-| `sirhurt\` | the extracted SirHurt archive (or the gofile/Box download) - a gofile download puts the bootstrapper (`SirHurt V5.exe`) at the top, a Box download keeps it one subfolder down (`sirhurt\SirHurt V5 Web\`) |
-| `cleaner\` | SirHurt Cleaner |
-| `downloads\` | the archive it moved into the install folder |
-| `README.txt` | the next steps, written whenever SirHurt is installed |
+| Path         | Content                                                                                                                                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sirhurt\`   | the extracted SirHurt archive (or the gofile/Box download) - a gofile download puts the bootstrapper (`SirHurt V5.exe`) at the top, a Box download keeps it one subfolder down (`sirhurt\SirHurt V5 Web\`) |
+| `cleaner\`   | SirHurt Cleaner                                                                                                                                                                                            |
+| `downloads\` | the archive it moved into the install folder                                                                                                                                                               |
+| `README.txt` | the next steps, written whenever SirHurt is installed                                                                                                                                                      |
 
 Outside the install folder:
 

@@ -4,7 +4,7 @@ description: Download a specific Roblox build and put it in the Roblox Versions 
 ---
 
 :::Caution
-**Recommended Version (as of 11/12/2026):** [version-4ea8e85481e34f46 (latest, no need to downgrade unless youre on beta)](https://sirhurt.net/downgradetutorial.php?version=version-4ea8e85481e34f46  )
+**Recommended Version (as of 11/12/2026):** [version-4ea8e85481e34f46 (latest, no need to downgrade unless youre on beta)](https://sirhurt.net/downgradetutorial.php?version=version-4ea8e85481e34f46)
 :::
 
 SirHurt injects into the Roblox build that is installed on your machine, so a downgrade is a

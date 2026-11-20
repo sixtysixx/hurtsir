@@ -10,9 +10,9 @@ like it is missing something, go back one page rather than hunting for a shortcu
 
 <Aside type="tip" title="You need, once">
   - Windows **11 24H2 or newer** - run `winver` and check for build **26100+**.
-  - **Administrator access** on the account you use.
-  - Roughly **2 GB** of free disk space.
-  - A **SirHurt account** - the download page requires a login and active subscription.
+  - **Administrator access** on the account you use. - Roughly **2 GB** of free
+  disk space. - A **SirHurt account** - the download page requires a login and
+  active subscription.
 </Aside>
 
 ## The path
@@ -50,7 +50,8 @@ like it is missing something, go back one page rather than hunting for a shortcu
   and writes a `README.txt` with the next steps into the install folder. Skip the manual pages it
   covers and pick the guide up at [Inject](/guide/injection/).
 
-  Building it yourself: `powershell -ExecutionPolicy Bypass -File tools/sirhurt-setup/build.ps1`.
+Building it yourself: `powershell -ExecutionPolicy Bypass -File tools/sirhurt-setup/build.ps1`.
+
 </Aside>
 
 If you would rather do it by hand, work the four pages above in order. Do not mix the two routes:
@@ -58,11 +59,11 @@ finish the manual steps you started, or let the tool finish its own.
 
 ## Words used in this guide
 
-| Term | Meaning |
-| ---- | ------- |
-| **SirHurt folder** | The dedicated folder you create in step 1. Everything is extracted under it. |
-| **Bootstrapper** | `SirHurt V5.exe`, the file you run as Administrator to inject. |
-| **Cleaner** | `SirHurtCleaner.exe`. Wipes old SirHurt and Roblox leftovers, including stored login data. |
+| Term                       | Meaning                                                                                                                                                                                      |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SirHurt folder**         | The dedicated folder you create in step 1. Everything is extracted under it.                                                                                                                 |
+| **Bootstrapper**           | `SirHurt V5.exe`, the file you run as Administrator to inject.                                                                                                                               |
+| **Cleaner**                | `SirHurtCleaner.exe`. Wipes old SirHurt and Roblox leftovers, including stored login data.                                                                                                   |
 | **Deployment / downgrade** | A specific Roblox build, identified by a hash such as `version-abc123cbt4204mee`. It lives as a folder under `%LOCALAPPDATA%\Roblox\Versions`, and that folder is what SirHurt injects into. |
 
 ## If something goes wrong
