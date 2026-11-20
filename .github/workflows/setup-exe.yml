@@ -32,9 +32,23 @@ jobs:
     name: Build (Windows x64)
     runs-on: windows-latest
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Check out
         uses: actions/checkout@v4
+
+      - name: Read setup version
+        id: version
+        shell: pwsh
+        run: |
+          $pattern = '^__version__ = "([^"]+)"$'
+          $match = Select-String -Path tools/sirhurt-setup/setup.py -Pattern $pattern |
+            Select-Object -First 1
+          if (-not $match) { throw "no __version__ line in tools/sirhurt-setup/setup.py" }
+          $version = $match.Matches[0].Groups[1].Value
+          [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "version=$version`n")
+          Write-Host "setup version: $version (tag v$version)"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -93,15 +107,21 @@ jobs:
 
   release:
     name: Release
-    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.release != '' }}
+    # Tag pushes, published releases, an explicit dispatch tag, and plain main
+    # pushes (which publish v<__version__> unless that release already exists).
+    if: >-
+      ${{ !cancelled() && needs.build.result == 'success' && (
+            github.event_name == 'release' ||
+            (github.event_name == 'workflow_dispatch' && github.event.inputs.release != '') ||
+            (github.event_name == 'push' &&
+             (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'))
+          ) }}
     needs: build
     runs-on: windows-latest
     permissions:
       contents: write
       id-token: write
       attestations: write
-    env:
-      RELEASE_TAG: ${{ github.event.inputs.release || github.ref_name }}
     steps:
       - name: Download exe
         uses: actions/download-artifact@v4
@@ -125,16 +145,41 @@ jobs:
       #       /fd sha256 /tr http://timestamp.digicert.com /td sha256 `
       #       dist/SixSirhurtUnretardifier9000Pro.exe
 
+      - name: Resolve release tag
+        id: tag
+        shell: pwsh
+        run: |
+          $event = "${{ github.event_name }}"
+          if ($event -eq "release") {
+            $tag = "${{ github.event.release.tag_name }}"
+          } elseif ($event -eq "workflow_dispatch") {
+            $tag = "${{ github.event.inputs.release }}"
+          } elseif ("${{ github.ref_type }}" -eq "tag") {
+            $tag = "${{ github.ref_name }}"
+          } else {
+            $tag = "v${{ needs.build.outputs.version }}"
+          }
+          if (-not $tag) { throw "could not resolve a release tag" }
+          [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "tag=$tag`n")
+          Write-Host "release tag: $tag"
+
       - name: Publish release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.tag.outputs.tag }}
         run: |
           $tag = $env:RELEASE_TAG
           if (-not $tag) { throw "no release tag resolved" }
 
+          $fromMain = ($env:GITHUB_EVENT_NAME -eq 'push' -and $env:GITHUB_REF -eq 'refs/heads/main')
+
           gh release view $tag --repo "$env:GITHUB_REPOSITORY" 2>$null | Out-Null
           if ($LASTEXITCODE -eq 0) {
+            if ($fromMain) {
+              Write-Host "release $tag already exists (setup version unchanged); nothing to publish"
+              exit 0
+            }
             Write-Host "release $tag exists; uploading assets"
             gh release upload $tag `
               dist/SixSirhurtUnretardifier9000Pro.exe `

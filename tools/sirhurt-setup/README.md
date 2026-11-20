@@ -23,11 +23,12 @@ Download the latest build from
   unpacks it into `%LOCALAPPDATA%\Roblox\Versions\version-<hash>` - the same
   `rbxPkgManifest.txt` walk [RDD](https://sirhurt.pages.dev/rdd/) does, so the client
   SirHurt injects into is the latest build without a separate version manager;
-- optionally downloads the SirHurt Cleaner and can run it in the same pass;
+- downloads the SirHurt Cleaner and runs it on every pass, before anything is installed, so old
+  Roblox/SirHurt files and stored login data are gone first (`--skip-cleaner` leaves them alone);
 - optionally turns off "Launch at startup" and "Minimize to tray when closed" in Roblox's
   `appStorage.json` - it offers to close a running Roblox first (the client writes its
   in-memory settings back on exit) and re-reads the file afterwards to confirm the change;
-- optionally schedules a reboot (the runtimes register themselves at boot);
+- optionally schedules a reboot in 15 seconds (the runtimes register themselves at boot);
 - writes `README.txt` with the next steps into the install folder (when SirHurt is
   installed).
 
@@ -86,9 +87,9 @@ SirHurt entirely (every other stage still runs, and no download link is requeste
 | `--skip-repair`          | don't run SFC and DISM                                                                                       |
 | `--skip-runtimes`        | don't install VC++ and .NET                                                                                  |
 | `--skip-roblox-settings` | don't touch Roblox's appStorage.json                                                                         |
-| `--run-cleaner`          | run SirHurt Cleaner (deletes Roblox/SirHurt configs, including stored SirHurt login data)                    |
-| `--reboot`               | restart Windows when the run finishes (60-second delay; cancel with `shutdown /a`)                           |
-| `--no-survey`            | don't ask the setup questions; use the defaults (everything except the cleaner and reboot)                   |
+| `--skip-cleaner`         | don't run the SirHurt Cleaner (it deletes Roblox/SirHurt configs, including stored SirHurt login data)       |
+| `--reboot`               | restart Windows when the run finishes (15-second delay; cancel with `shutdown /a`)                           |
+| `--no-survey`            | don't ask the setup questions; use the defaults (everything except the reboot)                               |
 | `--dry-run`              | resolve everything and print it, write nothing                                                               |
 | `--version`              | print the version                                                                                            |
 
@@ -113,12 +114,13 @@ Outside the install folder:
   and an existing `RobloxPlayerBeta.exe` is left alone;
 - `%LOCALAPPDATA%\Roblox\LocalStorage\appStorage.json` - `LaunchAtStartup` and
   `MinimizeToTray` set to `false`, with the original kept as `appStorage.json.bak`;
-- the Cleaner, when it runs, deletes Roblox and SirHurt leftovers: `%LOCALAPPDATA%\Roblox`,
+- the Cleaner, which now runs before the Roblox build is installed, deletes Roblox and SirHurt
+  leftovers: `%LOCALAPPDATA%\Roblox`,
   `%APPDATA%\sirhurt`, `%APPDATA%\Sirstrap`, the Roblox and SirHurt folders under
   `Program Files`/`Program Files (x86)`, the `sirhurta.dat`/`sirhurtp.dat`/`Sirstrap.ini`
   configuration files, `rsTrust`, and the `Roblox Corporation`, `Roblox` and `Asshurt`
   registry keys - **including stored SirHurt login data**;
-- `--reboot` schedules `shutdown /r /t 60`.
+- `--reboot` schedules `shutdown /r /t 15`.
 
 ## Next steps
 
@@ -131,10 +133,12 @@ Outside the install folder:
 4. Run the SirHurt bootstrapper (`SirHurt V5.exe`) as Administrator - it is in the
    `sirhurt` folder, or one subfolder down if the archive came from a Box share
    (right-click, then Run as administrator, and accept the UAC prompt).
-5. In the bootstrapper, click Inject once and log in. Do not click Inject a second time.
-6. Test with a small script such as Infinite Yield before using your own scripts.
+5. If SirHurt says an update is available, run `SirHurt V5 (Legacy UI).exe` from the same folder
+   and click **Yes** to let it update, then reopen the bootstrapper before injecting.
+6. In the bootstrapper, click Inject once and log in. Do not click Inject a second time.
+7. Test with a small script such as Infinite Yield before using your own scripts.
 
-The cleaner (if you ran it) deleted stored SirHurt login data, so you will need to log in
+The cleaner (unless you skipped it) deleted stored SirHurt login data, so you will need to log in
 again on the first injection.
 
 - Guide: <https://sirhurt.pages.dev/guide/injection/>
@@ -157,7 +161,9 @@ writes `build\SixSirhurtUnretardifier9000Pro.exe`.
 `.github/workflows/setup-exe.yml` builds on every push to `main` that touches the tool and on all
 pull requests, but only publishes a release when one of these is true:
 
-- a tag matching `v*` or `[0-9]*` is pushed (`git tag v1.1.0 && git push origin v1.1.0`);
+- a tag matching `v*` or `[0-9]*` is pushed (`git tag v1.2.0 && git push origin v1.2.0`);
+- a push to `main` bumps `__version__` in `setup.py` - the release is `v<version>`, and it is
+  skipped when that release already exists, so ordinary pushes stay artifact-only;
 - a GitHub release is published with the **Release** event;
 - **Actions → Setup exe → Run workflow** is started with a tag in the `release` input.
 

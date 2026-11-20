@@ -18,20 +18,23 @@ Automates stages 1-3 of https://sirhurt.pages.dev/guide/:
   latest build without a separate version manager (`--roblox-version` pins one,
   `--roblox-channel` follows a non-LIVE channel);
 * downloads the SirHurt Cleaner (the standalone CLI zip the Sirstrap releases
-  publish) and can run it from the same pass (`--run-cleaner`), answering `y` to
-  every prompt so old Roblox/SirHurt files and stored login data are gone before
-  the install;
+  publish) and runs it on every pass before anything is installed, answering `y`
+  to every prompt so old Roblox/SirHurt files and stored login data are gone
+  first (`--skip-cleaner` leaves them alone);
 * otherwise SirHurt needs the single-use link you get from sirhurt.net after
   logging in - a gofile.io folder or a Box share;
 * turns off "Launch at startup" and "Minimize to tray when closed" in Roblox's
   %LOCALAPPDATA%\\Roblox\\LocalStorage\\appStorage.json.
+
+Its next-steps file also spells out the update dance: when the SirHurt UI offers
+an update, run "SirHurt V5 (Legacy UI).exe" from the same folder and click Yes.
 
 Started with no switches from a console it first asks six yes/no questions (repair,
 exclusion, Roblox build, Cleaner, Roblox settings, reboot) and prints the resulting plan;
 `--no-survey` keeps the defaults and any stage switch skips the questions. When the
 SirHurt archive isn't found it offers a rescan loop instead of giving up, and the
 end of a run writes `<install folder>\\README.txt` with the next steps before it
-optionally schedules a 60-second reboot.
+optionally schedules a 15-second reboot.
 
 The install folder defaults to SirHurt inside Downloads, then Desktop, then
 Documents - the first one Windows reports as not synced to OneDrive - so it is
@@ -63,7 +66,7 @@ import webbrowser
 import zipfile
 from pathlib import Path
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 # The Cleaner is only published inside the Sirstrap releases; this endpoint
 # always answers with the newest SirHurt.Cleaner.CLI.zip, so no tag lookup.
@@ -130,6 +133,7 @@ USER_AGENT = "SirHurtSetup/1.0 (+https://sirhurt.pages.dev)"
 GOFILE_API = "https://api.gofile.io"
 HTTP_TIMEOUT = 30
 WINDOWS_24H2_BUILD = 26100
+REBOOT_DELAY_SECONDS = 15
 CHUNK_SIZE = 1 << 16
 
 
@@ -474,6 +478,7 @@ SURVEY_OPTOUT_FLAGS = frozenset({
     "--skip-repair",
     "--skip-runtimes",
     "--skip-roblox-settings",
+    "--skip-cleaner",
     "--run-cleaner",
     "--reboot",
     "--no-survey",
@@ -513,7 +518,7 @@ def apply_survey(args: argparse.Namespace) -> None:
     args.skip_exclusions = not answers["exclusions"]
     args.skip_roblox_build = not answers["roblox_build"]
     args.skip_roblox_settings = not answers["roblox_settings"]
-    args.run_cleaner = answers["cleaner"]
+    args.skip_cleaner = not answers["cleaner"]
     args.reboot = answers["reboot"]
 
 
@@ -525,10 +530,10 @@ def survey_plan(args: argparse.Namespace) -> str:
         stages.append("repair")
     if not args.skip_runtimes:
         stages.append("runtimes")
+    if not args.skip_cleaner:
+        stages.append("cleaner")
     if not args.skip_roblox_build:
         stages.append("roblox build")
-    if args.run_cleaner:
-        stages.append("cleaner")
     if not args.skip_sirhurt:
         stages.append("sirhurt")
     if not args.skip_roblox_settings:
@@ -1327,6 +1332,30 @@ def configure_roblox_settings(*, dry_run: bool) -> None:
         info("  saved and verified")
 
 
+def exe_by_name(folder: Path, needle: str, *, exclude: str = "") -> Path | None:
+    """First .exe under folder whose name contains needle (and not exclude)."""
+    if not folder.is_dir():
+        return None
+    for path in sorted(folder.rglob("*.exe")):
+        name = path.name.lower()
+        if needle in name and not (exclude and exclude in name):
+            return path
+    return None
+
+
+def find_bootstrapper(sirhurt_folder: Path) -> Path | None:
+    """The main UI, not the Legacy UI that sits beside it."""
+    for needle in ("sirhurt v5", "sirhurt"):
+        found = exe_by_name(sirhurt_folder, needle, exclude="legacy")
+        if found is not None:
+            return found
+    return exe_by_name(sirhurt_folder, "")
+
+
+def find_legacy_ui(sirhurt_folder: Path) -> Path | None:
+    return exe_by_name(sirhurt_folder, "legacy")
+
+
 # --------------------------------------------------------------------------- #
 # CLI
 # --------------------------------------------------------------------------- #
@@ -1386,19 +1415,27 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="don't touch Roblox's appStorage.json",
     )
     parser.add_argument(
-        "--run-cleaner",
+        "--skip-cleaner",
         action="store_true",
-        help="run SirHurt Cleaner (deletes Roblox/SirHurt configs, including stored SirHurt login data)",
+        help=(
+            "don't run the SirHurt Cleaner (it deletes Roblox/SirHurt configs, "
+            "including stored SirHurt login data)"
+        ),
     )
+    # Kept so older invocations still parse; the Cleaner now runs by default.
+    parser.add_argument("--run-cleaner", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--reboot",
         action="store_true",
-        help="restart Windows when the run finishes (60-second delay; cancel with 'shutdown /a')",
+        help=(
+            f"restart Windows when the run finishes ({REBOOT_DELAY_SECONDS}-second delay; "
+            "cancel with 'shutdown /a')"
+        ),
     )
     parser.add_argument(
         "--no-survey",
         action="store_true",
-        help="don't ask the setup questions; use the defaults (everything except the cleaner and reboot)",
+        help="don't ask the setup questions; use the defaults (everything except the reboot)",
     )
     parser.add_argument("--dry-run", action="store_true", help="resolve everything and print it, write nothing")
     parser.add_argument("--version", action="version", version=f"SirHurt Setup {__version__}")
@@ -1406,20 +1443,26 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+BOOTSTRAPPER_NAME = "SirHurt V5.exe"
+LEGACY_UI_NAME = "SirHurt V5 (Legacy UI).exe"
 NEXT_STEPS = """SirHurt setup - next steps
 ==========================
 
 1. Restart Windows if the setup asked for it (the runtimes register at boot).
 2. Open Roblox and join any game - injection needs a loaded game client.
 3. Wait 5-10 seconds after the game finishes loading.
-4. Run the SirHurt bootstrapper ("SirHurt V5.exe") as Administrator - it is in
+4. Run the SirHurt bootstrapper ("{bootstrapper}") as Administrator - it is in
    the "sirhurt" folder, or one subfolder down if the archive came from a Box
    share (right-click -> Run as administrator, then accept the UAC prompt).
-5. In the bootstrapper, click Inject once and log in. Do not click Inject a second time.
-6. Test with a small script such as Infinite Yield before using your own scripts.
+5. If SirHurt says an update is available, run "{legacy_ui}"
+   (same folder) and click Yes to let it update. Close it, then start the
+   bootstrapper again before injecting - that is the reliable way to take an
+   update.
+6. In the bootstrapper, click Inject once and log in. Do not click Inject a second time.
+7. Test with a small script such as Infinite Yield before using your own scripts.
 
-The cleaner (if you ran it) deleted stored SirHurt login data, so you will need to
-log in again on the first injection.
+The cleaner (unless you skipped it) deleted stored SirHurt login data, so you will
+need to log in again on the first injection.
 
 Guide:           https://sirhurt.pages.dev/guide/injection/
 Troubleshooting: https://sirhurt.pages.dev/guide/troubleshooting/
@@ -1429,21 +1472,35 @@ Discord:         https://discord.gg/sirhurt
 """
 
 
-def write_next_steps(target: Path) -> None:
+def write_next_steps(target: Path, bootstrapper: Path | None, legacy_ui: Path | None) -> None:
     path = target / "README.txt"
+    text = NEXT_STEPS.format(
+        bootstrapper=bootstrapper.name if bootstrapper is not None else BOOTSTRAPPER_NAME,
+        legacy_ui=legacy_ui.name if legacy_ui is not None else LEGACY_UI_NAME,
+    )
     try:
-        path.write_text(NEXT_STEPS, encoding="utf-8")
+        path.write_text(text, encoding="utf-8")
     except OSError as exc:
         warn(f"cannot write {path}: {exc}")
 
 
 def schedule_reboot(*, dry_run: bool) -> None:
-    info("\n[Reboot] Windows restarts in 60 seconds - run 'shutdown /a' to cancel")
+    info(
+        f"\n[Reboot] Windows restarts in {REBOOT_DELAY_SECONDS} seconds - "
+        "run 'shutdown /a' to cancel"
+    )
     if dry_run:
         return
     try:
         result = subprocess.run(
-            ["shutdown", "/r", "/t", "60", "/c", "SirHurt Setup finished - restarting"],
+            [
+                "shutdown",
+                "/r",
+                "/t",
+                str(REBOOT_DELAY_SECONDS),
+                "/c",
+                "SirHurt Setup finished - restarting",
+            ],
             check=False,
         )
     except OSError as exc:
@@ -1470,6 +1527,7 @@ def summarize(
     bootstrapper: Path | None,
     exclusion_ok: bool | None,
     roblox_build: Path | None,
+    legacy_ui: Path | None,
 ) -> None:
     info("\nDone. Layout:")
     for entry in sorted(target.iterdir(), key=lambda path: path.name.lower()):
@@ -1493,6 +1551,8 @@ def summarize(
     if bootstrapper is not None:
         info("Next: stage 4 of the guide - launch Roblox, join a game, then run the SirHurt loader")
         info("      as Administrator: https://sirhurt.pages.dev/guide/injection/")
+        legacy = legacy_ui.name if legacy_ui is not None else LEGACY_UI_NAME
+        info(f'If SirHurt reports an update: run "{legacy}", click Yes, then reopen the bootstrapper.')
     else:
         info("\nSirHurt itself wasn't installed - get it from https://sirhurt.net/login/download.php")
         info(f"and extract it into {target / 'sirhurt'}, then run its bootstrapper as Administrator.")
@@ -1514,12 +1574,12 @@ def run(args: argparse.Namespace, *, survey: bool) -> int:
         and args.skip_repair
         and args.skip_runtimes
         and args.skip_roblox_settings
-        and not args.run_cleaner
+        and args.skip_cleaner
         and not args.reboot
     ):
         raise SetupError("nothing to do: every stage was skipped and --reboot was not given")
     if args.dry_run and not is_admin() and (
-        not args.skip_exclusions or not args.skip_repair or args.run_cleaner
+        not args.skip_exclusions or not args.skip_repair or not args.skip_cleaner
     ):
         warn(
             "the real run needs Administrator for those stages; the dry run cannot show that failure"
@@ -1561,6 +1621,12 @@ def run(args: argparse.Namespace, *, survey: bool) -> int:
     runtimes_need_reboot = False
     if not args.skip_runtimes:
         runtimes_need_reboot = install_runtimes(dry_run=args.dry_run)
+    if not args.skip_cleaner:
+        # The Cleaner wipes %LOCALAPPDATA%\Roblox as well as SirHurt leftovers, so
+        # it has to run before the build is installed; install_cleaner returns
+        # early when the zip is already unpacked in <target>\cleaner.
+        install_cleaner(target, dry_run=args.dry_run)
+        run_sirhurt_cleaner(target, dry_run=args.dry_run)
     roblox_build: Path | None = None
     if not args.skip_roblox_build:
         roblox_build = install_roblox_build(
@@ -1569,11 +1635,6 @@ def run(args: argparse.Namespace, *, survey: bool) -> int:
             channel=args.roblox_channel,
             dry_run=args.dry_run,
         )
-    if args.run_cleaner:
-        # The Cleaner is its own download; install_cleaner returns early when it
-        # is already in <target>\cleaner.
-        install_cleaner(target, dry_run=args.dry_run)
-        run_sirhurt_cleaner(target, dry_run=args.dry_run)
     if not args.skip_sirhurt and local_archive is None:
         link = resolve_sirhurt_link(args.link, dry_run=args.dry_run)
         if link is not None:
@@ -1591,19 +1652,19 @@ def run(args: argparse.Namespace, *, survey: bool) -> int:
             schedule_reboot(dry_run=True)
         info("\ndry run: nothing was written")
     else:
-        if not args.skip_sirhurt:
-            write_next_steps(target)
         sirhurt_folder = target / "sirhurt"
-        bootstrapper = (
-            next(sirhurt_folder.rglob("*.exe"), None) if sirhurt_folder.is_dir() else None
-        )
+        bootstrapper = find_bootstrapper(sirhurt_folder)
+        legacy_ui = find_legacy_ui(sirhurt_folder)
+        if not args.skip_sirhurt:
+            write_next_steps(target, bootstrapper, legacy_ui)
         summarize(
             target,
             reboot_expected=repair_needs_reboot or runtimes_need_reboot,
-            cleaned=args.run_cleaner,
+            cleaned=not args.skip_cleaner,
             bootstrapper=bootstrapper,
             exclusion_ok=exclusion_ok,
             roblox_build=roblox_build,
+            legacy_ui=legacy_ui,
         )
         if args.reboot:
             schedule_reboot(dry_run=False)
