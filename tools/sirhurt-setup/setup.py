@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Set up SirHurt in one pass: exclusions, repair, runtimes, launch stack.
+"""Set up SirHurt in one pass: exclusions, repair, runtimes, Roblox build, launch stack.
 
 Automates stages 1-3 of https://sirhurt.pages.dev/guide/:
 
@@ -11,16 +11,23 @@ Automates stages 1-3 of https://sirhurt.pages.dev/guide/:
 * runs the system-repair chain (SFC, then DISM CheckHealth/ScanHealth/RestoreHealth);
 * installs both Visual C++ redistributables and the .NET Framework 4.8.1 web
   installer;
-* downloads Sirstrap's UI, Cleaner and CLI builds from their own releases, and can
-  run the Cleaner from the same pass (`--run-cleaner`), answering `y` to every prompt
-  so old Roblox/SirHurt files and stored login data are gone before the install;
+* resolves the published Windows build through Roblox's deployment API, then
+  downloads `rbxPkgManifest.txt` and every package it lists from Roblox's CDN
+  and unpacks them into %LOCALAPPDATA%\\Roblox\\Versions\\version-<hash> - the
+  same walk RDD does at /rdd/, so the client SirHurt injects into is the
+  latest build without a separate version manager (`--roblox-version` pins one,
+  `--roblox-channel` follows a non-LIVE channel);
+* downloads the SirHurt Cleaner (the standalone CLI zip the Sirstrap releases
+  publish) and can run it from the same pass (`--run-cleaner`), answering `y` to
+  every prompt so old Roblox/SirHurt files and stored login data are gone before
+  the install;
 * otherwise SirHurt needs the single-use link you get from sirhurt.net after
   logging in - a gofile.io folder or a Box share;
 * turns off "Launch at startup" and "Minimize to tray when closed" in Roblox's
   %LOCALAPPDATA%\\Roblox\\LocalStorage\\appStorage.json.
 
 Started with no switches from a console it first asks six yes/no questions (repair,
-exclusion, Sirstrap, Cleaner, Roblox settings, reboot) and prints the resulting plan;
+exclusion, Roblox build, Cleaner, Roblox settings, reboot) and prints the resulting plan;
 `--no-survey` keeps the defaults and any stage switch skips the questions. When the
 SirHurt archive isn't found it offers a rescan loop instead of giving up, and the
 end of a run writes `<install folder>\\README.txt` with the next steps before it
@@ -56,24 +63,33 @@ import webbrowser
 import zipfile
 from pathlib import Path
 
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 
-SIRSTRAP_RELEASES_API = "https://codeberg.org/api/v1/repos/Sirstrap/Sirstrap/releases?limit=20"
-SIRSTRAP_DOWNLOAD_BASE = "https://sirstrap.com/releases"
-SIRSTRAP_FALLBACK_TAG = "v10.12.7.6-beta"
-SIRSTRAP_CLEANER_ASSET = "SirHurt.Cleaner.CLI.zip"
-SIRSTRAP_CLEANER_FOLDER = "cleaner"
-SIRSTRAP_CLI_FOLDER = "sirstrap-cli"
-SIRSTRAP_ASSETS = (
-    ("Sirstrap.UI.zip", "sirstrap"),
-    (SIRSTRAP_CLEANER_ASSET, SIRSTRAP_CLEANER_FOLDER),
-    # The CLI zip ships only Sirstrap.exe, so it gets its own folder.
-    ("Sirstrap.CLI.zip", SIRSTRAP_CLI_FOLDER),
+# The Cleaner is only published inside the Sirstrap releases; this endpoint
+# always answers with the newest SirHurt.Cleaner.CLI.zip, so no tag lookup.
+CLEANER_URL = "https://www.sirstrap.com/releases/download.php?file=SirHurt.Cleaner.CLI.zip"
+CLEANER_ASSET = "SirHurt.Cleaner.CLI.zip"
+CLEANER_FOLDER = "cleaner"
+# Roblox deployment download, mirroring RDD (/rdd/): the settings API reports the
+# build that is actually published, the CDN serves its manifest and packages.
+ROBLOX_SETTINGS_API = "https://clientsettingscdn.roblox.com"
+ROBLOX_CDN = "https://setup-aws.rbxcdn.com"
+ROBLOX_BINARY_TYPE = "WindowsPlayer"
+ROBLOX_DEFAULT_CHANNEL = "LIVE"
+ROBLOX_MANIFEST_SUFFIX = "-rbxPkgManifest.txt"
+# RobloxApp.zip unpacks into the version folder itself; every other package stays
+# the zip the client reads, which is the split RDD uses too.
+ROBLOX_UNPACKED_PACKAGES = frozenset({"RobloxApp.zip"})
+ROBLOX_PLAYER_EXE = "RobloxPlayerBeta.exe"
+ROBLOX_APP_SETTINGS = (
+    '<?xml version="1.0" encoding="UTF-8"?>\n'
+    "<Settings>\n"
+    "    <ContentFolder>content</ContentFolder>\n"
+    "    <BaseUrl>http://www.roblox.com</BaseUrl>\n"
+    "</Settings>\n"
 )
-# Older tags predate the CLI asset; fall back to the latest-release endpoint.
-SIRSTRAP_ASSET_FALLBACKS = {
-    "Sirstrap.CLI.zip": "https://www.sirstrap.com/releases/download.php?file=Sirstrap.CLI.zip",
-}
+# name, md5, compressed size, uncompressed size
+MANIFEST_ENTRY_LINES = 4
 # The thank-you page (DOTNET481_PAGE) is HTML; its "download manually" link is
 # this fwlink, which resolves to NDP481-Web.exe.
 DOTNET481_PAGE = "https://dotnet.microsoft.com/en-us/download/dotnet-framework/thank-you/net481-web-installer"
@@ -91,6 +107,7 @@ REPAIR_CHAIN = (
     ("DISM RestoreHealth", "dism.exe", ("/Online", "/Cleanup-Image", "/RestoreHealth")),
 )
 ROBLOX_STORAGE_PARTS = ("Roblox", "LocalStorage", "appStorage.json")
+ROBLOX_VERSIONS_PARTS = ("Roblox", "Versions")
 ROBLOX_SETTINGS = {"LaunchAtStartup": "false", "MinimizeToTray": "false"}
 # Install-folder parents, in order of preference. Resolved through the shell so
 # a OneDrive folder-redirect is visible rather than guessed at.
@@ -133,7 +150,7 @@ def warn(message: str) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def http_json(url: str, data: bytes | None = None, headers: dict[str, str] | None = None) -> object:
+def http_bytes(url: str, data: bytes | None = None, headers: dict[str, str] | None = None) -> bytes:
     request_headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
     if headers:
         request_headers.update(headers)
@@ -145,17 +162,25 @@ def http_json(url: str, data: bytes | None = None, headers: dict[str, str] | Non
     )
     try:
         with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as response:
-            raw = response.read()
+            return response.read()
     except urllib.error.HTTPError as exc:
         raise SetupError(f"HTTP {exc.code} from {url}") from exc
     except urllib.error.URLError as exc:
         raise SetupError(f"cannot reach {url}: {exc.reason}") from exc
     except (TimeoutError, OSError) as exc:
         raise SetupError(f"network error talking to {url}: {exc}") from exc
+
+
+def http_json(url: str, data: bytes | None = None, headers: dict[str, str] | None = None) -> object:
+    raw = http_bytes(url, data, headers)
     try:
         return json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise SetupError(f"malformed JSON from {url}") from exc
+
+
+def http_text(url: str) -> str:
+    return http_bytes(url).decode("utf-8", "replace")
 
 
 def download(url: str, destination: Path) -> None:
@@ -423,7 +448,11 @@ def resolve_target(raw: str | None, *, dry_run: bool) -> Path:
 SURVEY_QUESTIONS = (
     ("repair", "do you want to run system corruption scans?", False),
     ("exclusions", "do you want to add an exclusion for the sirhurt folder?", True),
-    ("sirstrap", "do you want to use sirstrap to avoid version mismatches?", True),
+    (
+        "roblox_build",
+        "do you want to download the latest Roblox build into %LOCALAPPDATA%\\Roblox\\Versions?",
+        True,
+    ),
     (
         "cleaner",
         "do you want to download and clean current sirhurt configuration(s) via sirhurt cleaner?",
@@ -437,7 +466,9 @@ SURVEY_QUESTIONS = (
     ("reboot", "do you want to automatically reboot your PC?", False),
 )
 SURVEY_OPTOUT_FLAGS = frozenset({
-    "--skip-sirstrap",
+    "--skip-roblox-build",
+    "--roblox-version",
+    "--roblox-channel",
     "--skip-sirhurt",
     "--skip-exclusions",
     "--skip-repair",
@@ -480,7 +511,7 @@ def apply_survey(args: argparse.Namespace) -> None:
     answers = {key: ask_yes_no(question, default) for key, question, default in SURVEY_QUESTIONS}
     args.skip_repair = not answers["repair"]
     args.skip_exclusions = not answers["exclusions"]
-    args.skip_sirstrap = not answers["sirstrap"]
+    args.skip_roblox_build = not answers["roblox_build"]
     args.skip_roblox_settings = not answers["roblox_settings"]
     args.run_cleaner = answers["cleaner"]
     args.reboot = answers["reboot"]
@@ -494,8 +525,8 @@ def survey_plan(args: argparse.Namespace) -> str:
         stages.append("repair")
     if not args.skip_runtimes:
         stages.append("runtimes")
-    if not args.skip_sirstrap:
-        stages.append("sirstrap")
+    if not args.skip_roblox_build:
+        stages.append("roblox build")
     if args.run_cleaner:
         stages.append("cleaner")
     if not args.skip_sirhurt:
@@ -761,68 +792,131 @@ def install_runtimes(*, dry_run: bool) -> bool:
 
 
 # --------------------------------------------------------------------------- #
-# Sirstrap
+# Roblox deployment (what RDD does, without the browser)
 # --------------------------------------------------------------------------- #
 
 
-def resolve_sirstrap_tag() -> str:
-    try:
-        releases = http_json(SIRSTRAP_RELEASES_API)
-    except SetupError as exc:
-        warn(f"cannot read the Sirstrap release API ({exc}); using {SIRSTRAP_FALLBACK_TAG}")
-        return SIRSTRAP_FALLBACK_TAG
-    if not isinstance(releases, list):
-        warn(f"unexpected Sirstrap release API response; using {SIRSTRAP_FALLBACK_TAG}")
-        return SIRSTRAP_FALLBACK_TAG
-    for release in releases:
-        if not isinstance(release, dict) or release.get("draft"):
+def roblox_versions_root() -> Path:
+    local = os.environ.get("LOCALAPPDATA")
+    if not local:
+        raise SetupError("LOCALAPPDATA is not set; cannot find Roblox's Versions folder")
+    return Path(local).joinpath(*ROBLOX_VERSIONS_PARTS)
+
+
+def resolve_roblox_version(channel: str) -> str:
+    """The published WindowsPlayer build - the hash RDD resolves before downloading.
+
+    Roblox's settings API reports the build that is actually on the CDN; the
+    CDN's own version file can point at one that is staged but not yet served.
+    """
+    name = channel.strip() or ROBLOX_DEFAULT_CHANNEL
+    url = f"{ROBLOX_SETTINGS_API}/v2/client-version/{ROBLOX_BINARY_TYPE}"
+    if name.upper() not in ("LIVE", "PRODUCTION"):
+        url += f"/channel/{urllib.parse.quote(name, safe='')}"
+    payload = http_json(url)
+    if not isinstance(payload, dict):
+        raise SetupError(f"unexpected response from {url}")
+    version = str(payload.get("clientVersionUpload") or "").strip().lower()
+    if not version:
+        raise SetupError(f"{url} reported no clientVersionUpload")
+    return version if version.startswith("version-") else f"version-{version}"
+
+
+def parse_pkg_manifest(body: str) -> list[tuple[str, str, int]]:
+    """(name, md5, compressed size) for every package in an rbxPkgManifest v0."""
+    lines = [line.strip() for line in body.splitlines() if line.strip()]
+    if not lines or lines[0] != "v0":
+        raise SetupError(
+            f"unrecognised rbxPkgManifest header: {lines[0] if lines else '(empty response)'}"
+        )
+    packages: list[tuple[str, str, int]] = []
+    for start in range(1, len(lines) - MANIFEST_ENTRY_LINES + 1, MANIFEST_ENTRY_LINES):
+        name, md5 = lines[start], lines[start + 1].lower()
+        # RobloxPlayerInstaller.exe is listed too; only the zips are packages.
+        if not name.lower().endswith(".zip"):
             continue
-        for asset in release.get("assets") or ():
-            if not isinstance(asset, dict):
-                continue
-            name = str(asset.get("name") or "").lower()
-            if name.startswith("sirstrap.ui") and name.endswith(".zip"):
-                tag = str(release.get("tag_name") or "")
-                if tag:
-                    return tag
-    warn(f"no Sirstrap.UI.zip found in the last 20 releases; using {SIRSTRAP_FALLBACK_TAG}")
-    return SIRSTRAP_FALLBACK_TAG
-
-
-def download_sirstrap_asset(url: str, asset: str, destination: Path, *, dry_run: bool) -> None:
-    info(f"\n[Sirstrap] {asset}")
-    info(f"  url:    {url}")
-    info(f"  target: {destination}")
-    if dry_run:
-        return
-    with tempfile.TemporaryDirectory(prefix="sirhurt-setup-") as scratch:
-        archive = Path(scratch) / asset
-        download(url, archive)
-        if not zipfile.is_zipfile(archive):
-            raise SetupError(
-                f"{asset} did not download as a zip archive - the release layout may have changed"
-            )
-        safe_extract_zip(archive, destination)
-    executables = sorted(path.name for path in destination.rglob("*.exe"))
-    info(f"  extracted: {', '.join(executables) if executables else '(no .exe found)'}")
-
-
-def install_sirstrap(target: Path, tag: str, *, dry_run: bool) -> None:
-    for asset, subfolder in SIRSTRAP_ASSETS:
-        url = f"{SIRSTRAP_DOWNLOAD_BASE}/{tag}/{asset}"
-        destination = target / subfolder
         try:
-            download_sirstrap_asset(url, asset, destination, dry_run=dry_run)
-        except SetupError as exc:
-            fallback = SIRSTRAP_ASSET_FALLBACKS.get(asset)
-            if fallback is None:
-                raise
-            warn(f"{asset} is not in {tag} ({exc}); using the latest release instead")
-            download_sirstrap_asset(fallback, asset, destination, dry_run=dry_run)
+            size = int(lines[start + 2])
+        except ValueError:
+            size = 0
+        packages.append((name, md5, size))
+    if not any(name in ROBLOX_UNPACKED_PACKAGES for name, _, _ in packages):
+        raise SetupError("rbxPkgManifest lists no RobloxApp.zip - the deployment layout changed")
+    return packages
+
+
+def verify_package(path: Path, md5: str, size: int) -> None:
+    """The manifest carries the md5 and the compressed size of every package."""
+    actual = path.stat().st_size
+    if size and actual != size:
+        raise SetupError(f"{path.name} is {actual} bytes; the manifest lists {size}")
+    digest = hashlib.md5(usedforsecurity=False)  # md5 is what the manifest publishes
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(CHUNK_SIZE), b""):
+            digest.update(chunk)
+    if digest.hexdigest() != md5:
+        raise SetupError(f"{path.name} failed verification (md5 {digest.hexdigest()} != {md5})")
+
+
+def install_roblox_build(
+    versions_root: Path,
+    *,
+    version: str | None,
+    channel: str,
+    dry_run: bool,
+) -> Path:
+    """Unpack the latest (or pinned) deployment into Versions\\version-<hash>."""
+    resolved = (version or "").strip().lower() or resolve_roblox_version(channel)
+    if not resolved.startswith("version-"):
+        resolved = f"version-{resolved}"
+    destination = versions_root / resolved
+    manifest_url = f"{ROBLOX_CDN}/{resolved}{ROBLOX_MANIFEST_SUFFIX}"
+    info(f"\n[Roblox build] {resolved}")
+    info(f"  build:  {ROBLOX_BINARY_TYPE} on {channel.strip() or ROBLOX_DEFAULT_CHANNEL}")
+    info(f"  cdn:    {manifest_url}")
+    info(f"  target: {destination}")
+    if (destination / ROBLOX_PLAYER_EXE).is_file():
+        info(f"  already installed ({ROBLOX_PLAYER_EXE} is there); leaving it alone")
+        return destination
+    try:
+        packages = parse_pkg_manifest(http_text(manifest_url))
+    except SetupError as exc:
+        raise SetupError(
+            f"cannot read the manifest for {resolved} ({exc}) - the build may not be "
+            "published on that channel yet; retry, or drop --roblox-version"
+        ) from exc
+    total = sum(size for _, _, size in packages)
+    info(f"  packages: {len(packages)} ({total / (1 << 20):.1f} MiB)")
+    if dry_run:
+        for name, _, size in packages:
+            info(f"  would download {name} ({size / (1 << 20):.1f} MiB)")
+        info(f"  would unpack RobloxApp.zip into {destination} and keep the rest zipped")
+        return destination
+    destination.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="sirhurt-roblox-") as scratch:
+        for index, (name, md5, size) in enumerate(packages, start=1):
+            info(f"  [{index}/{len(packages)}] {name} ({size / (1 << 20):.1f} MiB)")
+            blob = Path(scratch) / name
+            download(f"{ROBLOX_CDN}/{resolved}-{name}", blob)
+            verify_package(blob, md5, size)
+            if name in ROBLOX_UNPACKED_PACKAGES:
+                safe_extract_zip(blob, destination)
+            else:
+                shutil.copy2(blob, destination / name)
+    (destination / "AppSettings.xml").write_text(ROBLOX_APP_SETTINGS, encoding="utf-8")
+    if not (destination / ROBLOX_PLAYER_EXE).is_file():
+        raise SetupError(f"{destination} has no {ROBLOX_PLAYER_EXE} - the deployment layout changed")
+    info(f"  installed {ROBLOX_PLAYER_EXE} into {destination}")
+    return destination
+
+
+# --------------------------------------------------------------------------- #
+# SirHurt Cleaner
+# --------------------------------------------------------------------------- #
 
 
 def cleaner_executable(target: Path) -> Path | None:
-    folder = target / SIRSTRAP_CLEANER_FOLDER
+    folder = target / CLEANER_FOLDER
     if not folder.is_dir():
         return None
     for executable in sorted(folder.rglob("*.exe")):
@@ -832,15 +926,26 @@ def cleaner_executable(target: Path) -> Path | None:
 
 
 def install_cleaner(target: Path, *, dry_run: bool) -> None:
-    """Download just the Cleaner when --skip-sirstrap is combined with --run-cleaner."""
+    """Fetch the standalone Cleaner zip and unpack it into <target>\\cleaner."""
     if cleaner_executable(target) is not None:
         return
-    tag = resolve_sirstrap_tag()
-    info(f"\nSirstrap release: {tag}")
-    url = f"{SIRSTRAP_DOWNLOAD_BASE}/{tag}/{SIRSTRAP_CLEANER_ASSET}"
-    download_sirstrap_asset(
-        url, SIRSTRAP_CLEANER_ASSET, target / SIRSTRAP_CLEANER_FOLDER, dry_run=dry_run
-    )
+    destination = target / CLEANER_FOLDER
+    info(f"\n[Cleaner] {CLEANER_ASSET}")
+    info(f"  url:    {CLEANER_URL}")
+    info(f"  target: {destination}")
+    if dry_run:
+        return
+    with tempfile.TemporaryDirectory(prefix="sirhurt-setup-") as scratch:
+        archive = Path(scratch) / CLEANER_ASSET
+        download(CLEANER_URL, archive)
+        if not zipfile.is_zipfile(archive):
+            raise SetupError(
+                f"{CLEANER_ASSET} did not download as a zip archive - "
+                "the release layout may have changed"
+            )
+        safe_extract_zip(archive, destination)
+    executables = sorted(path.name for path in destination.rglob("*.exe"))
+    info(f"  extracted: {', '.join(executables) if executables else '(no .exe found)'}")
 
 
 def run_sirhurt_cleaner(target: Path, *, dry_run: bool) -> None:
@@ -849,9 +954,9 @@ def run_sirhurt_cleaner(target: Path, *, dry_run: bool) -> None:
     executable = cleaner_executable(target)
     if executable is None:
         if dry_run:
-            info(f"  would run the Cleaner from {target / SIRSTRAP_CLEANER_FOLDER} (downloaded if missing)")
+            info(f"  would run the Cleaner from {target / CLEANER_FOLDER} (downloaded if missing)")
             return
-        raise SetupError(f"SirHurt Cleaner isn't in {target / SIRSTRAP_CLEANER_FOLDER}")
+        raise SetupError(f"SirHurt Cleaner isn't in {target / CLEANER_FOLDER}")
     if dry_run:
         info(f"  would run {executable} (deletes Roblox/SirHurt configs and stored login data)")
         return
@@ -900,7 +1005,7 @@ def resolve_sirhurt_link(explicit: str | None, *, dry_run: bool) -> tuple[str, s
             "(gofile.io/d/... or app.box.com/s/..., or 'q' to cancel): "
         )
         if raw.strip().lower() == "q":
-            info("cancelled - Sirstrap is installed, SirHurt was skipped")
+            info("cancelled - the Roblox build is installed, SirHurt was skipped")
             return None
         try:
             return classify_link(raw)
@@ -1230,7 +1335,10 @@ def configure_roblox_settings(*, dry_run: bool) -> None:
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="SixSirhurtUnretardifier9000Pro",
-        description="Prepare Windows, then download Sirstrap and SirHurt into one folder (stages 1-3).",
+        description=(
+            "Prepare Windows, install the latest Roblox build into Versions, then download "
+            "SirHurt into one folder (stages 1-3)."
+        ),
         epilog="Guide: https://sirhurt.pages.dev/guide/",
     )
     parser.add_argument(
@@ -1253,9 +1361,20 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="ignore any SirHurt archive sitting next to this script",
     )
     parser.add_argument(
-        "--skip-sirstrap",
+        "--skip-roblox-build",
         action="store_true",
-        help="don't download Sirstrap (UI, Cleaner or CLI)",
+        help="don't download a Roblox deployment into %%LOCALAPPDATA%%\\Roblox\\Versions",
+    )
+    parser.add_argument(
+        "--roblox-version",
+        metavar="HASH",
+        help="Roblox build to install instead of the latest one (version-xxxxxxxxxxxx)",
+    )
+    parser.add_argument(
+        "--roblox-channel",
+        metavar="NAME",
+        default=ROBLOX_DEFAULT_CHANNEL,
+        help=f"Roblox channel to resolve the build on (default: {ROBLOX_DEFAULT_CHANNEL})",
     )
     parser.add_argument("--skip-sirhurt", action="store_true", help="don't install SirHurt")
     parser.add_argument("--skip-exclusions", action="store_true", help="don't add the Defender exclusion")
@@ -1305,7 +1424,7 @@ log in again on the first injection.
 Guide:           https://sirhurt.pages.dev/guide/injection/
 Troubleshooting: https://sirhurt.pages.dev/guide/troubleshooting/
 Downgrade:       https://sirhurt.pages.dev/guide/downgrade/
-Sirstrap:        https://sirstrap.com/
+Roblox builds:   https://sirhurt.pages.dev/rdd/
 Discord:         https://discord.gg/sirhurt
 """
 
@@ -1350,6 +1469,7 @@ def summarize(
     cleaned: bool,
     bootstrapper: Path | None,
     exclusion_ok: bool | None,
+    roblox_build: Path | None,
 ) -> None:
     info("\nDone. Layout:")
     for entry in sorted(target.iterdir(), key=lambda path: path.name.lower()):
@@ -1364,6 +1484,12 @@ def summarize(
         info(
             f"\nThe Defender exclusion was not confirmed - add {target} in Windows Security by hand."
         )
+    if roblox_build is not None:
+        info(f"\nRoblox build in place: {roblox_build}")
+        info("  launch the game through Roblox as usual - that folder holds the client SirHurt injects into")
+    else:
+        info("\nNo Roblox build was installed - grab one from https://sirhurt.pages.dev/rdd/")
+        info(f"and extract it into {roblox_versions_root()} as version-<hash>.")
     if bootstrapper is not None:
         info("Next: stage 4 of the guide - launch Roblox, join a game, then run the SirHurt loader")
         info("      as Administrator: https://sirhurt.pages.dev/guide/injection/")
@@ -1382,7 +1508,7 @@ def run(args: argparse.Namespace, *, survey: bool) -> int:
         info(f"plan: {survey_plan(args)}")
         info("  Ctrl+C cancels.")
     if (
-        args.skip_sirstrap
+        args.skip_roblox_build
         and args.skip_sirhurt
         and args.skip_exclusions
         and args.skip_repair
@@ -1435,13 +1561,17 @@ def run(args: argparse.Namespace, *, survey: bool) -> int:
     runtimes_need_reboot = False
     if not args.skip_runtimes:
         runtimes_need_reboot = install_runtimes(dry_run=args.dry_run)
-    if not args.skip_sirstrap:
-        tag = resolve_sirstrap_tag()
-        info(f"\nSirstrap release: {tag}")
-        install_sirstrap(target, tag, dry_run=args.dry_run)
+    roblox_build: Path | None = None
+    if not args.skip_roblox_build:
+        roblox_build = install_roblox_build(
+            roblox_versions_root(),
+            version=args.roblox_version,
+            channel=args.roblox_channel,
+            dry_run=args.dry_run,
+        )
     if args.run_cleaner:
-        # The Cleaner lives in the Sirstrap release, so --skip-sirstrap does not
-        # cover it; install_cleaner returns early when it is already there.
+        # The Cleaner is its own download; install_cleaner returns early when it
+        # is already in <target>\cleaner.
         install_cleaner(target, dry_run=args.dry_run)
         run_sirhurt_cleaner(target, dry_run=args.dry_run)
     if not args.skip_sirhurt and local_archive is None:
@@ -1473,6 +1603,7 @@ def run(args: argparse.Namespace, *, survey: bool) -> int:
             cleaned=args.run_cleaner,
             bootstrapper=bootstrapper,
             exclusion_ok=exclusion_ok,
+            roblox_build=roblox_build,
         )
         if args.reboot:
             schedule_reboot(dry_run=False)

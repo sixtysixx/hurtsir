@@ -19,8 +19,11 @@ Download the latest build from
 - optionally runs the system-repair chain (SFC, then DISM
   CheckHealth/ScanHealth/RestoreHealth);
 - installs both Visual C++ redistributables and the .NET Framework 4.8.1 web installer;
-- optionally downloads Sirstrap's UI, the SirHurt Cleaner and the Sirstrap CLI, and can
-  run the Cleaner in the same pass;
+- optionally resolves the published Windows build through Roblox's deployment API and
+  unpacks it into `%LOCALAPPDATA%\Roblox\Versions\version-<hash>` - the same
+  `rbxPkgManifest.txt` walk [RDD](https://sirhurt.pages.dev/rdd/) does, so the client
+  SirHurt injects into is the latest build without a separate version manager;
+- optionally downloads the SirHurt Cleaner and can run it in the same pass;
 - optionally turns off "Launch at startup" and "Minimize to tray when closed" in Roblox's
   `appStorage.json` - it offers to close a running Roblox first (the client writes its
   in-memory settings back on exit) and re-reads the file afterwards to confirm the change;
@@ -47,7 +50,7 @@ before touching anything and then prints the resulting plan:
 | ---------------------------------------------------------------------- | ------- |
 | do you want to run system corruption scans?                             | `n`     |
 | do you want to add an exclusion for the sirhurt folder?                 | `y`     |
-| do you want to use sirstrap to avoid version mismatches?                | `y`     |
+| do you want to download the latest Roblox build into `%LOCALAPPDATA%\Roblox\Versions`? | `y` |
 | do you want to download and clean current sirhurt configuration(s) via sirhurt cleaner? | `y` |
 | do you want to turn off launch at start and minimize to tray to avoid possible injection issues? | `y` |
 | do you want to automatically reboot your PC?                            | `n`     |
@@ -75,7 +78,9 @@ SirHurt entirely (every other stage still runs, and no download link is requeste
 | `--link URL` | SirHurt download link (gofile.io or app.box.com) |
 | `--archive PATH` | SirHurt archive to use instead of scanning this script's folder |
 | `--no-local-archive` | ignore any SirHurt archive sitting next to this script |
-| `--skip-sirstrap` | don't download Sirstrap (UI, Cleaner or CLI) |
+| `--skip-roblox-build` | don't download a Roblox deployment into `%LOCALAPPDATA%\Roblox\Versions` |
+| `--roblox-version HASH` | Roblox build to install instead of the latest one (`version-xxxxxxxxxxxx`) |
+| `--roblox-channel NAME` | Roblox channel to resolve the build on (default: `LIVE`) |
 | `--skip-sirhurt` | don't install SirHurt |
 | `--skip-exclusions` | don't add the Defender exclusion |
 | `--skip-repair` | don't run SFC and DISM |
@@ -94,8 +99,6 @@ Inside the install folder:
 | Path | Content |
 | ---- | ------- |
 | `sirhurt\` | the extracted SirHurt archive (or the gofile/Box download) - a gofile download puts the bootstrapper (`SirHurt V5.exe`) at the top, a Box download keeps it one subfolder down (`sirhurt\SirHurt V5 Web\`) |
-| `sirstrap\` | Sirstrap UI |
-| `sirstrap-cli\` | Sirstrap CLI |
 | `cleaner\` | SirHurt Cleaner |
 | `downloads\` | the archive it moved into the install folder |
 | `README.txt` | the next steps, written whenever SirHurt is installed |
@@ -103,6 +106,11 @@ Inside the install folder:
 Outside the install folder:
 
 - a Windows Defender folder exclusion for the install folder;
+- `%LOCALAPPDATA%\Roblox\Versions\version-<hash>` - the deployment's packages, with
+  `RobloxApp.zip` unpacked in place (`RobloxPlayerBeta.exe`, `RobloxPlayerBeta.dll`,
+  `RobloxCrashHandler.exe`, `COPYRIGHT.txt`) and the content packages left zipped, plus
+  `AppSettings.xml`; every package is checked against the md5 and size in the manifest,
+  and an existing `RobloxPlayerBeta.exe` is left alone;
 - `%LOCALAPPDATA%\Roblox\LocalStorage\appStorage.json` - `LaunchAtStartup` and
   `MinimizeToTray` set to `false`, with the original kept as `appStorage.json.bak`;
 - the Cleaner, when it runs, deletes Roblox and SirHurt leftovers: `%LOCALAPPDATA%\Roblox`,
@@ -115,7 +123,10 @@ Outside the install folder:
 ## Next steps
 
 1. Restart Windows if the setup asked for it (the runtimes register at boot).
-2. Open Roblox and join any game - injection needs a loaded game client.
+2. Open Roblox and join any game - injection needs a loaded game client. If SirHurt reports an
+   unsupported version, install the build it wants into `%LOCALAPPDATA%\Roblox\Versions` (the
+   [Downgrade Tutorial](https://sirhurt.pages.dev/guide/downgrade/) covers it) and start
+   `RobloxPlayerBeta.exe` from that folder instead of the Start-menu shortcut.
 3. Wait 5-10 seconds after the game finishes loading.
 4. Run the SirHurt bootstrapper (`SirHurt V5.exe`) as Administrator - it is in the
    `sirhurt` folder, or one subfolder down if the archive came from a Box share
@@ -129,7 +140,7 @@ again on the first injection.
 - Guide: <https://sirhurt.pages.dev/guide/injection/>
 - Troubleshooting: <https://sirhurt.pages.dev/guide/troubleshooting/>
 - Downgrade: <https://sirhurt.pages.dev/guide/downgrade/>
-- Sirstrap: <https://sirstrap.com/>
+- Roblox builds: <https://sirhurt.pages.dev/rdd/>
 - Discord: <https://discord.gg/sirhurt>
 
 ## Build it
