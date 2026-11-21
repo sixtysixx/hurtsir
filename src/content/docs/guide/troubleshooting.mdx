@@ -18,6 +18,7 @@ seeing and work the steps in order.
 | Antivirus flags or deletes files          | below       | [Prepare Windows](/guide/preparation/)      |
 | Scripts don't execute                     | below       | [Inject](/guide/injection/)                 |
 | Downgrade downloads fail                  | below       | [Downgrade Tutorial](/guide/downgrade/)     |
+| "Failed to load library: WebView2Loader.dll" | below    | [Install SirHurt](/guide/install/)          |
 | Roblox won't launch                       | below       | [Prepare Windows](/guide/preparation/)      |
 
 <Aside type="tip" title="Run these five checks first">
@@ -58,7 +59,8 @@ update, the build you're on is usually too new.
 6. Fully close Roblox - including from the system tray - before replacing anything.
 
 7. Extract the `version-<hash>.zip` into `%LOCALAPPDATA%\Roblox\Versions\version-<hash>`, so
-   `RobloxPlayerBeta.exe` and the `content-*.zip` packages sit directly in that folder.
+   `RobloxPlayerBeta.exe`, `WebView2Loader.dll` and the `content\`/`PlatformContent\`/
+   `ExtraContent\`/`shaders\`/`ssl\` folders sit directly in that folder.
 
 8. Start `RobloxPlayerBeta.exe` from that folder - not the Start-menu shortcut, which runs the
    updater - then join a game and wait 5-10 seconds before injecting.
@@ -201,6 +203,28 @@ the scanner acts.
 
 5. Make sure you have enough free disk space: the assembled archive is several
    hundred MB, and it's built in memory in your browser.
+
+</Steps>
+
+## "Failed to load library: WebView2Loader.dll"
+
+**Caused by:** a build extracted with `WebView2.zip` still zipped. Fix the layout as described in
+[Install SirHurt](/guide/install/).
+
+<Steps>
+
+1. Look in `%LOCALAPPDATA%\Roblox\Versions\version-<hash>`. `WebView2Loader.dll` must be there,
+   next to `RobloxPlayerBeta.exe`.
+
+2. If it is missing, extract `WebView2.zip` into that same folder - it contains nothing but that
+   DLL (`WebView2RuntimeInstaller.zip` belongs in a `WebView2RuntimeInstaller\` subfolder).
+
+3. The content packages belong in folders too: `content\`, `PlatformContent\pc\...`,
+   `ExtraContent\...`, `shaders\` and `ssl\`. Extract the RDD download as it comes instead of
+   rearranging it.
+
+4. Simplest fix on a machine that used the setup tool: run it again - it unpacks every package
+   where the client expects it and removes stale root zips.
 
 </Steps>
 

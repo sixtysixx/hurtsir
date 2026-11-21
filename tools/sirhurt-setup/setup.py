@@ -66,7 +66,7 @@ import webbrowser
 import zipfile
 from pathlib import Path
 
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 
 # The Cleaner is only published inside the Sirstrap releases; this endpoint
 # always answers with the newest SirHurt.Cleaner.CLI.zip, so no tag lookup.
@@ -80,10 +80,44 @@ ROBLOX_CDN = "https://setup-aws.rbxcdn.com"
 ROBLOX_BINARY_TYPE = "WindowsPlayer"
 ROBLOX_DEFAULT_CHANNEL = "LIVE"
 ROBLOX_MANIFEST_SUFFIX = "-rbxPkgManifest.txt"
-# RobloxApp.zip unpacks into the version folder itself; every other package stays
-# the zip the client reads, which is the split RDD uses too.
-ROBLOX_UNPACKED_PACKAGES = frozenset({"RobloxApp.zip"})
 ROBLOX_PLAYER_EXE = "RobloxPlayerBeta.exe"
+ROBLOX_WEBVIEW_LOADER = "WebView2Loader.dll"
+# Where each package unpacks under Versions\version-<hash>, mirroring RDD (/rdd/):
+# "" unpacks into the version folder itself, "x/" into that subfolder. Packages
+# missing from this map are kept as the zip the client reads. Getting this wrong
+# is what breaks a hand-installed build - RobloxPlayerBeta.exe loads
+# WebView2Loader.dll from the version folder and exits with "Failed to load
+# library: WebView2Loader.dll" when it is still inside WebView2.zip.
+ROBLOX_PACKAGE_ROOTS = {
+    "RobloxApp.zip": "",
+    "redist.zip": "",
+    "shaders.zip": "shaders/",
+    "ssl.zip": "ssl/",
+    "WebView2.zip": "",
+    "WebView2RuntimeInstaller.zip": "WebView2RuntimeInstaller/",
+    "content-avatar.zip": "content/avatar/",
+    "content-configs.zip": "content/configs/",
+    "content-fonts.zip": "content/fonts/",
+    "content-sky.zip": "content/sky/",
+    "content-sounds.zip": "content/sounds/",
+    "content-textures2.zip": "content/textures/",
+    "content-models.zip": "content/models/",
+    "content-platform-fonts.zip": "PlatformContent/pc/fonts/",
+    "content-platform-dictionaries.zip": "PlatformContent/pc/shared_compression_dictionaries/",
+    "content-terrain.zip": "PlatformContent/pc/terrain/",
+    "content-textures3.zip": "PlatformContent/pc/textures/",
+    "extracontent-luapackages.zip": "ExtraContent/LuaPackages/",
+    "extracontent-translations.zip": "ExtraContent/translations/",
+    "extracontent-models.zip": "ExtraContent/models/",
+    "extracontent-textures.zip": "ExtraContent/textures/",
+    "extracontent-places.zip": "ExtraContent/places/",
+}
+# Packages that unpack straight into the version folder share it with everything
+# else, so they get explicit markers instead of a folder to look for.
+ROBLOX_PACKAGE_MARKERS = {
+    "RobloxApp.zip": (ROBLOX_PLAYER_EXE, "RobloxPlayerBeta.dll"),
+    "WebView2.zip": (ROBLOX_WEBVIEW_LOADER,),
+}
 ROBLOX_APP_SETTINGS = (
     '<?xml version="1.0" encoding="UTF-8"?>\n'
     "<Settings>\n"
@@ -231,15 +265,23 @@ def download(url: str, destination: Path) -> None:
 
 
 def safe_extract_zip(archive: Path, destination: Path) -> None:
-    """Extract archive into destination, refusing absolute, .., and symlink entries."""
+    """Extract archive into destination, refusing drive-absolute, .., and symlink entries.
+
+    Roblox's packages store names like "/abilities/x" - the leading slash is the
+    package root, not an absolute path, so it is stripped and the entry stays
+    inside destination.
+    """
     destination.mkdir(parents=True, exist_ok=True)
     root = destination.resolve()
     with zipfile.ZipFile(archive) as bundle:
         for member in bundle.infolist():
             name = member.filename.replace("\\", "/")
-            parts = [part for part in name.split("/") if part not in ("", ".")]
-            if name.startswith("/") or (len(name) > 1 and name[1] == ":"):
+            if len(name) > 1 and name[1] == ":":
                 raise SetupError(f"refusing absolute path {member.filename!r} in {archive.name}")
+            parts = [part for part in name.lstrip("/").split("/") if part not in ("", ".")]
+            if not parts:
+                # A bare "/" (WebView2RuntimeInstaller.zip has one) is the zip root.
+                continue
             if any(part == ".." for part in parts):
                 raise SetupError(f"refusing path with '..' in {archive.name}: {member.filename!r}")
             if member.is_dir():
@@ -845,9 +887,26 @@ def parse_pkg_manifest(body: str) -> list[tuple[str, str, int]]:
         except ValueError:
             size = 0
         packages.append((name, md5, size))
-    if not any(name in ROBLOX_UNPACKED_PACKAGES for name, _, _ in packages):
+    if "RobloxApp.zip" not in {name for name, _, _ in packages}:
         raise SetupError("rbxPkgManifest lists no RobloxApp.zip - the deployment layout changed")
     return packages
+
+
+def package_present(destination: Path, name: str) -> bool:
+    """True when the package is already in place, unpacked where it belongs or zipped."""
+    root = ROBLOX_PACKAGE_ROOTS.get(name)
+    if root is None:
+        return (destination / name).is_file()
+    if root == "":
+        markers = ROBLOX_PACKAGE_MARKERS.get(name)
+        # No marker for a root-destined package: unpack it again rather than guess.
+        return bool(markers) and all((destination / marker).is_file() for marker in markers)
+    folder = destination / root
+    return folder.is_dir() and any(folder.iterdir())
+
+
+def package_target(destination: Path, name: str) -> Path:
+    return destination / ROBLOX_PACKAGE_ROOTS[name]
 
 
 def verify_package(path: Path, md5: str, size: int) -> None:
@@ -880,9 +939,6 @@ def install_roblox_build(
     info(f"  build:  {ROBLOX_BINARY_TYPE} on {channel.strip() or ROBLOX_DEFAULT_CHANNEL}")
     info(f"  cdn:    {manifest_url}")
     info(f"  target: {destination}")
-    if (destination / ROBLOX_PLAYER_EXE).is_file():
-        info(f"  already installed ({ROBLOX_PLAYER_EXE} is there); leaving it alone")
-        return destination
     try:
         packages = parse_pkg_manifest(http_text(manifest_url))
     except SetupError as exc:
@@ -890,28 +946,47 @@ def install_roblox_build(
             f"cannot read the manifest for {resolved} ({exc}) - the build may not be "
             "published on that channel yet; retry, or drop --roblox-version"
         ) from exc
+    if all(package_present(destination, name) for name, _, _ in packages):
+        info(f"  already installed ({ROBLOX_PLAYER_EXE} and {ROBLOX_WEBVIEW_LOADER} are there)")
+        return destination
     total = sum(size for _, _, size in packages)
     info(f"  packages: {len(packages)} ({total / (1 << 20):.1f} MiB)")
     if dry_run:
         for name, _, size in packages:
-            info(f"  would download {name} ({size / (1 << 20):.1f} MiB)")
-        info(f"  would unpack RobloxApp.zip into {destination} and keep the rest zipped")
+            root = ROBLOX_PACKAGE_ROOTS.get(name)
+            where = f" -> {root or os.sep}" if root is not None else " (kept zipped)"
+            info(f"  would download {name} ({size / (1 << 20):.1f} MiB){where}")
         return destination
     destination.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="sirhurt-roblox-") as scratch:
         for index, (name, md5, size) in enumerate(packages, start=1):
+            if package_present(destination, name):
+                info(f"  [{index}/{len(packages)}] {name}: already in place")
+                continue
             info(f"  [{index}/{len(packages)}] {name} ({size / (1 << 20):.1f} MiB)")
             blob = Path(scratch) / name
             download(f"{ROBLOX_CDN}/{resolved}-{name}", blob)
             verify_package(blob, md5, size)
-            if name in ROBLOX_UNPACKED_PACKAGES:
-                safe_extract_zip(blob, destination)
+            if name in ROBLOX_PACKAGE_ROOTS:
+                safe_extract_zip(blob, package_target(destination, name))
+                # Earlier runs (and RDD before this layout) left the zip at the
+                # root; it is redundant once unpacked.
+                if ROBLOX_PACKAGE_ROOTS[name]:
+                    (destination / name).unlink(missing_ok=True)
             else:
                 shutil.copy2(blob, destination / name)
     (destination / "AppSettings.xml").write_text(ROBLOX_APP_SETTINGS, encoding="utf-8")
-    if not (destination / ROBLOX_PLAYER_EXE).is_file():
-        raise SetupError(f"{destination} has no {ROBLOX_PLAYER_EXE} - the deployment layout changed")
-    info(f"  installed {ROBLOX_PLAYER_EXE} into {destination}")
+    required = [ROBLOX_PLAYER_EXE, ROBLOX_WEBVIEW_LOADER]
+    missing = [name for name in required if not (destination / name).is_file()]
+    if missing:
+        raise SetupError(
+            f"{destination} is missing {', '.join(missing)} - the deployment layout changed"
+        )
+    # A zip at the version root is stale: every package in the map was unpacked,
+    # so anything left over comes from an older layout (RDD's or ours).
+    for name in ROBLOX_PACKAGE_ROOTS:
+        (destination / name).unlink(missing_ok=True)
+    info(f"  installed {ROBLOX_PLAYER_EXE} and {ROBLOX_WEBVIEW_LOADER} into {destination}")
     return destination
 
 

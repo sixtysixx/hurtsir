@@ -106,11 +106,14 @@ Inside the install folder:
 Outside the install folder:
 
 - a Windows Defender folder exclusion for the install folder;
-- `%LOCALAPPDATA%\Roblox\Versions\version-<hash>` - the deployment's packages, with
-  `RobloxApp.zip` unpacked in place (`RobloxPlayerBeta.exe`, `RobloxPlayerBeta.dll`,
-  `RobloxCrashHandler.exe`, `COPYRIGHT.txt`) and the content packages left zipped, plus
-  `AppSettings.xml`; every package is checked against the md5 and size in the manifest,
-  and an existing `RobloxPlayerBeta.exe` is left alone;
+- `%LOCALAPPDATA%\Roblox\Versions\version-<hash>` - the deployment's packages unpacked where the
+  client expects them, same as RDD: `RobloxApp.zip` and `WebView2.zip` into the version folder
+  (`RobloxPlayerBeta.exe`, `RobloxPlayerBeta.dll`, `RobloxCrashHandler.exe`, `COPYRIGHT.txt`,
+  `WebView2Loader.dll`), `shaders.zip` into `shaders\`, `ssl.zip` into `ssl\`, the content packages
+  into `content\`, `PlatformContent\pc\...` and `ExtraContent\...`, and
+  `WebView2RuntimeInstaller.zip` into `WebView2RuntimeInstaller\`, plus `AppSettings.xml`; every
+  package is checked against the md5 and size in the manifest, packages already in place are
+  skipped, and stale root zips from older layouts are removed;
 - `%LOCALAPPDATA%\Roblox\LocalStorage\appStorage.json` - `LaunchAtStartup` and
   `MinimizeToTray` set to `false`, with the original kept as `appStorage.json.bak`;
 - the Cleaner, which now runs before the Roblox build is installed, deletes Roblox and SirHurt

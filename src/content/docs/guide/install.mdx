@@ -88,8 +88,9 @@ the whole downgrade - there is no separate launcher to set up.
    `AppData` is hidden by default.
 
 4. Create a folder named after the build and extract the zip into it, so you end up with
-   `Versions\version-<hash>\RobloxPlayerBeta.exe` and the `content-*.zip` packages beside it. The
-   zip has no wrapper folder of its own.
+   `Versions\version-<hash>\RobloxPlayerBeta.exe`, `WebView2Loader.dll` and the `content\`,
+   `PlatformContent\`, `ExtraContent\`, `shaders\` and `ssl\` folders beside it. The zip has no
+   wrapper folder of its own.
 
 5. Use **7-Zip** or **WinRAR**, not Windows' built-in extractor.
 
@@ -98,6 +99,13 @@ the whole downgrade - there is no separate launcher to set up.
 <Aside type="note" title="Launch that build, not the shortcut">
   Start `RobloxPlayerBeta.exe` from inside `Versions\version-<hash>`. The Start-menu shortcut runs
   Roblox's updater, which replaces the build you just installed.
+</Aside>
+
+<Aside type="danger" title="Don't leave the WebView2 packages zipped">
+  Roblox exits with **"Failed to load library: WebView2Loader.dll"** when `WebView2Loader.dll` is
+  still inside `WebView2.zip`. That DLL has to sit next to `RobloxPlayerBeta.exe`, and the content
+  packages have to be unpacked into their folders - extract the download as it comes, don't
+  reorganise it.
 </Aside>
 
 ## Step 4 - Add the Cleaner
@@ -124,8 +132,9 @@ working.
 
 1. `sirhurt\` contains the bootstrapper and its folders.
 
-2. `Versions\version-<hash>\RobloxPlayerBeta.exe` exists, with the `content-*.zip` packages and
-   `AppSettings.xml` beside it.
+2. `Versions\version-<hash>\RobloxPlayerBeta.exe`, `WebView2Loader.dll` and `AppSettings.xml`
+   exist, with the `content\`, `PlatformContent\`, `ExtraContent\`, `shaders\` and `ssl\` folders
+   beside them.
 
 3. `cleaner\SirHurtCleaner.exe` exists if you downloaded it.
 

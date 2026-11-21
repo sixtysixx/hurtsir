@@ -22,9 +22,11 @@ is what the bootstrapper attaches to. There is nothing else to install.
 4. Open `%LOCALAPPDATA%\Roblox\Versions` in Explorer. Paste the path into the address bar;
    `AppData` is hidden by default.
 5. Make a folder named after the build and extract the zip into it, so you end up with
-   `Versions\version-<hash>\RobloxPlayerBeta.exe`, the `content-*.zip` packages and
-   `AppSettings.xml` beside it. The zip has no wrapper folder, so create `version-<hash>` yourself
-   and extract into it with **7-Zip** or **WinRAR**.
+   `Versions\version-<hash>\RobloxPlayerBeta.exe`, `WebView2Loader.dll`, `AppSettings.xml` and the
+   `content\`, `PlatformContent\`, `ExtraContent\`, `shaders\` and `ssl\` folders beside them.
+   The zip has no wrapper folder, so create `version-<hash>` yourself and extract into it with
+   **7-Zip** or **WinRAR**. Keep the packages where the zip puts them - a `WebView2Loader.dll` left
+   inside `WebView2.zip` makes Roblox fail with "Failed to load library".
 6. Start `RobloxPlayerBeta.exe` from inside that folder rather than the Start-menu shortcut. The
    shortcut runs Roblox's updater, which pulls the newest build back over the one you installed.
 7. Join a game, wait 5-10 seconds for the client to finish loading, then inject from the
