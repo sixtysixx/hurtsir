@@ -182,4 +182,8 @@ const rules = [
   ),
   "",
 ].join("\n");
-writeFileSync(REDIRECTS, rules);
+// Rewriting an unchanged file only dirties the working tree (and, on Windows,
+// leaves the stat cache to catch up), so compare first. Line endings are
+// normalized because git checks the file out with CRLF but we write LF.
+const previous = readFileSync(REDIRECTS, { throwIfNoEntry: false })?.toString("utf8") ?? "";
+if (previous.replace(/\r\n/g, "\n") !== rules) writeFileSync(REDIRECTS, rules);

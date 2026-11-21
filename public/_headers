@@ -1,7 +1,7 @@
 # Cloudflare Pages response headers.
 # Pages serves everything with `max-age=0, must-revalidate` unless told
 # otherwise, which forces a revalidation round trip on every repeat visit -
-# including each of the ~400 cat images under /gifz. Content-hashed or
+# including every cat image under /gifz. Content-hashed or
 # never-changing files can be cached hard; HTML is deliberately left out so
 # deploys show up immediately.
 

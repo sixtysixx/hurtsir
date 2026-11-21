@@ -156,6 +156,18 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 The script builds `setup.py` with Nuitka, using the repository `.venv` when it exists, and
 writes `build\SixSirhurtUnretardifier9000Pro.exe`.
 
+## Test it
+
+`test_setup.py` covers the pieces that decide what gets downloaded and where it
+lands: the `rbxPkgManifest` parser, package md5/size verification, the
+package-to-folder map, gofile/Box link parsing and the install-folder guards.
+
+```powershell
+python -m unittest discover -s tools/sirhurt-setup -p "test_*.py" -v
+```
+
+CI runs the suite before every Nuitka build.
+
 ## Releases
 
 `.github/workflows/setup-exe.yml` builds on every push to `main` that touches the tool and on all
