@@ -36,8 +36,7 @@ Download the latest build from
 
 - Windows 11 24H2 or newer - check with `winver` (`build 26100+`).
 - Administrator rights: the exe re-launches itself through the UAC prompt on start.
-- The SirHurt archive from <https://sirhurt.net/login/download.php>, renamed so its name
-  mentions SirHurt (`.zip`, `.7z` or `.rar`) and placed next to the exe.
+- The SirHurt archive from <https://sirhurt.net/login/download.php>
 - Around 2 GB of free space.
 - Keep the install folder out of OneDrive and out of `C:\Program Files` - the setup
   refuses those locations on purpose.
@@ -130,13 +129,11 @@ Outside the install folder:
    [Downgrade Tutorial](https://sirhurt.pages.dev/guide/downgrade/) covers it) and start
    `RobloxPlayerBeta.exe` from that folder instead of the Start-menu shortcut.
 3. Wait 5-10 seconds after the game finishes loading.
-4. Run the SirHurt bootstrapper (`SirHurt V5.exe`) as Administrator - it is in the
+4. Run the SirHurt Legacy UI (`SirHurt V5 (Legacy Ui).exe`) as Administrator - it is in the
    `sirhurt` folder, or one subfolder down if the archive came from a Box share
    (right-click, then Run as administrator, and accept the UAC prompt).
-5. If SirHurt says an update is available, run `SirHurt V5 (Legacy UI).exe` from the same folder
-   and click **Yes** to let it update, then reopen the bootstrapper before injecting.
-6. In the bootstrapper, click Inject once and log in. Do not click Inject a second time.
-7. Test with a small script such as Infinite Yield before using your own scripts.
+5. If SirHurt says an update is available click **Yes** to let it update.
+6. Test with a small script such as Infinite Yield before using your own scripts.
 
 The cleaner (unless you skipped it) deleted stored SirHurt login data, so you will need to log in
 again on the first injection.
